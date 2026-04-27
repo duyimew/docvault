@@ -4,7 +4,7 @@ namespace: default
 image:
   repository: duyimew/metadata-service
   tag: "v81"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  digest: "sha256:e7f0bab48061a614ac7669fe965446bc56e3bcb096225ec9ff1584181a8d150c"
 
 service:
   type: NodePort

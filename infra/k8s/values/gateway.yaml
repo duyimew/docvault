@@ -4,7 +4,7 @@ namespace: default
 image:
   repository: duyimew/gateway
   tag: "v81"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  digest: "sha256:92e814e05d7a9d0eb4885755ffc1217c635552a4e2463f7604e655cd19a7f589"
 
 service:
   type: NodePort

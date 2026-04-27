@@ -2,7 +2,7 @@
 image:
   repository: duyimew/notification-service
   tag: "v81"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  digest: "sha256:b3fea44f9bc6e272096e9fb8eba3644ef522e60a72f62ba1871db5f1d808ce92"
 
 service:
   type: NodePort

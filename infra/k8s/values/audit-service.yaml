@@ -4,7 +4,7 @@ namespace: default
 image:
   repository: duyimew/audit-service
   tag: "v81"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  digest: "sha256:4f01cf5193c45c7d20ab1cabf3aed7d9bfbfbdc93f07940b729807dd5443e9a6"
 
 service:
   type: NodePort

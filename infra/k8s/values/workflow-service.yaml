@@ -2,7 +2,7 @@
 image:
   repository: duyimew/workflow-service
   tag: "v81"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  digest: "sha256:c0abf8919a8e28cefffb19aa49ab38a92e6b04c21fbeaa7a36230743b2ce2fa5"
 
 service:
   type: NodePort

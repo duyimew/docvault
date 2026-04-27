@@ -4,7 +4,7 @@ namespace: default
 image:
   repository: duyimew/document-service
   tag: "v81"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  digest: "sha256:0b617cc97c3034058f3648f7b60d6bde3a6ffc7c639b51fd363c76a710ed9f56"
 
 service:
   type: NodePort

@@ -2,7 +2,7 @@
 image:
   repository: duyimew/docvault
   tag: "v81"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  digest: "sha256:d824eb8800f7129c65781ccf1bd6dc48e9d5c9159aa5f7679e142f6c9a50ad3e"
 
 service:
   type: NodePort
