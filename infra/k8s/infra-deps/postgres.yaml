@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: postgres-secret
+  namespace: docvault
 type: Opaque
 stringData:
   POSTGRES_USER: docvault
@@ -12,6 +13,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-init-sql
+  namespace: docvault
 data:
   init.sql: |
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -36,6 +38,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: db
+  namespace: docvault
 spec:
   replicas: 1
   selector:
@@ -94,6 +97,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: db
+  namespace: docvault
 spec:
   selector:
     app: db
