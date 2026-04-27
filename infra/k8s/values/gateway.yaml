@@ -1,5 +1,5 @@
 # gateway service values
-namespace: default
+namespace: docvault
 
 image:
   repository: duyimew/gateway
