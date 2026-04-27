@@ -23,3 +23,6 @@ env:
 envFrom:
   - secretRef:
       name: docvault-app-secrets
+
+probes:
+  path: /api/health

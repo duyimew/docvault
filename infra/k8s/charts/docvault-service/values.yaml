@@ -27,3 +27,6 @@ env:
   NODE_ENV: production
 
 envFrom: []
+
+probes:
+  path: /health
