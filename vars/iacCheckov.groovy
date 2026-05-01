@@ -1,19 +1,34 @@
-def call(cfg) {
+def call(Map cfg = [:]) {
     echo '>>> Running Checkov IaC Scan (Terraform/K8s/Helm only)...'
 
-    withEnv(["CHECKOV_IMAGE=${cfg.checkovImage}"]) {
+    String checkovImage = cfg.checkovImage ?: 'bridgecrew/checkov:latest'
+    String skipChecks   = cfg.skipChecks ?: ''
+    String extraArgs    = cfg.extraArgs ?: ''
+
+    withEnv([
+        "CHECKOV_IMAGE=${checkovImage}",
+        "CHECKOV_SKIP_CHECKS=${skipChecks}",
+        "CHECKOV_EXTRA_ARGS=${extraArgs}"
+    ]) {
         sh '''
             set -eu
             mkdir -p checkov-report
 
             TARGET_ARGS=""
+
             [ -d "$WORKSPACE/infra/k8s" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/k8s"
             [ -d "$WORKSPACE/infra/argocd" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/argocd"
             [ -d "$WORKSPACE/infra/terraform" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/terraform"
+            [ -d "$WORKSPACE/charts" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/charts"
 
             if [ -z "$TARGET_ARGS" ]; then
               echo "No IaC directories found. Skipping Checkov."
               exit 0
+            fi
+
+            SKIP_ARGS=""
+            if [ -n "$CHECKOV_SKIP_CHECKS" ]; then
+              SKIP_ARGS="--skip-check $CHECKOV_SKIP_CHECKS"
             fi
 
             status=0
@@ -23,6 +38,8 @@ def call(cfg) {
                 "$CHECKOV_IMAGE" \
                 $TARGET_ARGS \
                 --framework terraform,kubernetes,helm \
+                $SKIP_ARGS \
+                $CHECKOV_EXTRA_ARGS \
                 --output cli \
                 > checkov-report/checkov-report.txt 2>&1
             then
