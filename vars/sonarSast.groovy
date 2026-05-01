@@ -28,6 +28,7 @@ def call(Map cfg = [:]) {
             echo ">>> Sonar sources          : ${sources}"
 
             docker run --rm \\
+                --add-host=host.docker.internal:host-gateway \\
                 -v "${env.WORKSPACE}:/usr/src" \\
                 -v "${env.WORKSPACE}/.sonar-cache:/opt/sonar-scanner/.sonar/cache" \\
                 -w /usr/src \\
