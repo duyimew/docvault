@@ -1,5 +1,5 @@
 # audit-service values
-namespace: default
+namespace: docvault
 
 image:
   repository: daithang59/audit-service

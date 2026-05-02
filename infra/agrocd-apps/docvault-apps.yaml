@@ -14,11 +14,13 @@ spec:
         - ../../values/gateway.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -36,11 +38,13 @@ spec:
         - ../../values/metadata-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -58,11 +62,13 @@ spec:
         - ../../values/audit-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -80,11 +86,13 @@ spec:
         - ../../values/notification-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -102,11 +110,13 @@ spec:
         - ../../values/workflow-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -124,11 +134,13 @@ spec:
         - ../../values/document-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -146,8 +158,10 @@ spec:
         - ../../values/web.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
