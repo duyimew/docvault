@@ -405,7 +405,6 @@ docker logs --tail 200 sonarqube
 ## 16. Gợi ý cho repo DocVault
 
 - SonarQube: scan `apps, services, libs`
-- Checkov: chỉ scan `infra/k8s`, `infra/argocd`, `infra/terraform`
+- Checkov: chỉ scan `infra/k8s`, `infra/argocd-apps`, `infra/terraform`
 - Trivy: quét image/container
 - Không để SonarQube và Checkov cùng quét một scope quá rộng, sẽ rất nhiễu
-

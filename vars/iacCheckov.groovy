@@ -20,7 +20,7 @@ def call(Map cfg = [:]) {
 
             [ -d "$WORKSPACE/infra/k8s" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/k8s"
             [ -d "$WORKSPACE/infra/argocd" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/argocd"
-            [ -d "$WORKSPACE/infra/agrocd-apps" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/agrocd-apps"
+            [ -d "$WORKSPACE/infra/argocd-apps" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/argocd-apps"
             [ -d "$WORKSPACE/infra/terraform" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/infra/terraform"
             [ -d "$WORKSPACE/charts" ] && TARGET_ARGS="$TARGET_ARGS --directory /repo/charts"
 

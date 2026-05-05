@@ -13,8 +13,7 @@ spec:
       values: |
         grafana:
           service:
-            type: NodePort
-            nodePort: 31000
+            type: ClusterIP
           adminPassword: "admin"
         prometheus:
           prometheusSpec:
@@ -23,9 +22,6 @@ spec:
     server: "https://kubernetes.default.svc"
     namespace: monitoring
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
       - ServerSideApply=true
       - CreateNamespace=true

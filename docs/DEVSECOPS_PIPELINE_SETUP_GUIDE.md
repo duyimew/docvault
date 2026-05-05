@@ -49,7 +49,7 @@ Pipeline chính nằm ở:
 - `apps/web/Dockerfile`: build image frontend.
 - `infra/k8s/charts/docvault-service`: Helm chart generic.
 - `infra/k8s/values/*.yaml`: values theo service.
-- `infra/agrocd-apps/*.yaml`: ArgoCD Application manifests.
+- `infra/argocd-apps/*.yaml`: ArgoCD Application manifests.
 
 Luồng mục tiêu:
 
@@ -235,12 +235,12 @@ dockerOrg: '<dockerhub-user>'
 gitOpsRepoUrl: 'https://github.com/daithang59/docvault.git'
 gitOpsBranch: 'gitops-testing'
 sonarHostUrl: 'http://host.docker.internal:9000'
-zapTarget: 'http://<gateway-nodeport-host>:30000/api'
+zapTarget: ''
 ```
 
 Trong repo hiện tại `dockerOrg` đã đặt là `daithang59`. Nếu Docker Hub username của bạn khác GitHub username, đổi `dockerOrg` trong `vars/docvaultConfig.groovy` và `repository` trong `infra/k8s/values/*.yaml` sang namespace Docker Hub thật.
 
-Nếu bạn chưa deploy lên Kubernetes, có thể để ZAP fail sau hoặc tạm bỏ stage `DAST - OWASP ZAP` trong `Jenkinsfile` khi test CI cơ bản.
+Khi chua deploy len Kubernetes, giu `RUN_ZAP=false`. Sau khi Gateway co URL that va Jenkins/ZAP container curl duoc URL do, dien pipeline parameter `ZAP_TARGET=http://<gateway-url>/api` va bat `RUN_ZAP=true`.
 
 ## 10. Tạo Jenkins Shared Library
 
@@ -336,14 +336,14 @@ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/st
 Apply ArgoCD app manifests:
 
 ```bash
-kubectl apply -f infra/agrocd-apps/docvault-infra.yaml
-kubectl apply -f infra/agrocd-apps/docvault-apps.yaml
+kubectl apply -f infra/argocd-apps/docvault-infra.yaml
+kubectl apply -f infra/argocd-apps/docvault-apps.yaml
 ```
 
 Nếu muốn monitoring:
 
 ```bash
-kubectl apply -f infra/agrocd-apps/monitoring.yaml
+kubectl apply -f infra/argocd-apps/monitoring.yaml
 ```
 
 Kiểm tra:
@@ -433,7 +433,7 @@ git push -u origin gitops-testing
 
 ### ZAP fail
 
-ZAP cần gateway API thật sự chạy tại `zapTarget`. Nếu chưa deploy cluster, tạm bỏ qua ZAP để hoàn thiện CI trước.
+ZAP can gateway API that su reachable tu Jenkins/ZAP container. Neu chua deploy cluster, giu `RUN_ZAP=false`. Khi da co target, dien `ZAP_TARGET=http://<gateway-url>/api`.
 
 ## 16. Thứ Tự Làm Khuyến Nghị
 

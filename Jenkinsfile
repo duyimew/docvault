@@ -26,6 +26,11 @@ pipeline {
             defaultValue: false,
             description: 'Run DAST scan after deploy target is reachable.'
         )
+        string(
+            name: 'ZAP_TARGET',
+            defaultValue: '',
+            description: 'Reachable Gateway API URL for ZAP, for example http://<gateway-url>/api. Required only when RUN_ZAP=true.'
+        )
     }
 
     environment {
@@ -52,9 +57,14 @@ pipeline {
                         ? params.GITOPS_BRANCH.trim()
                         : cfg.gitOpsBranch
 
+                    cfg.zapTarget = params.ZAP_TARGET?.trim()
+                        ? params.ZAP_TARGET.trim()
+                        : cfg.zapTarget
+
                     echo ">>> Effective GitOps branch: ${cfg.gitOpsBranch}"
                     echo ">>> FORCE_BUILD_ALL=${params.FORCE_BUILD_ALL}"
                     echo ">>> RUN_ZAP=${params.RUN_ZAP}"
+                    echo ">>> ZAP_TARGET=${cfg.zapTarget ?: '(not set)'}"
                 }
             }
         }
@@ -121,6 +131,14 @@ pipeline {
                     steps {
                         script {
                             iacCheckov(cfg)
+                        }
+                    }
+                }
+
+                stage('IaC - Terraform Validate') {
+                    steps {
+                        script {
+                            terraformValidate(cfg)
                         }
                     }
                 }

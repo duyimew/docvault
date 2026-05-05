@@ -155,7 +155,8 @@ $env:DOCVAULT_NS="docvault"
 
 EKS co chi phi rieng cho control plane va EC2 node. De demo do an:
 
-- Dung 1-2 node `t3.medium` truoc.
+- Lan dau nen dung 2 node `t3.large` de giam loi thieu RAM khi chay Argo CD, Keycloak, Postgres, MongoDB, MinIO, web, gateway va cac backend service.
+- Sau khi on dinh co the giam ve `t3.medium` de tiet kiem chi phi.
 - Chua dung NAT Gateway neu khong can, vi NAT Gateway co the ton chi phi.
 - Chua bat ALB/Ingress public ngay tu dau.
 - Test xong thi `terraform destroy` neu khong dung tiep.
@@ -177,6 +178,7 @@ Tao thu muc:
 
 ```text
 infra/terraform/aws-eks/
+  .terraform.lock.hcl
   versions.tf
   providers.tf
   variables.tf
@@ -193,9 +195,81 @@ mkdir -p infra/terraform/aws-eks
 cd infra/terraform/aws-eks
 ```
 
+Cay thu muc `infra` sau khi bo sung Terraform/Argo CD nen co dang:
+
+```text
+infra/
+  README.md
+  .env.example
+  docker-compose.dev.yml
+  argocd-apps/
+    docvault-infra.yaml
+    docvault-apps.yaml
+    monitoring.yaml
+  db/
+    README.md
+    init-postgres.sql
+  keycloak/
+    README.md
+    realm-docvault.json
+    seed-roles.sh
+  minio/
+    README.md
+    init.sh
+  k8s/
+    charts/
+      docvault-service/
+        Chart.yaml
+        values.yaml
+        templates/
+          deployment.yaml
+          networkpolicy.yaml
+          service.yaml
+    infra-deps/
+      README.md
+      app-secrets.yaml
+      keycloak.yaml
+      keycloak-cm.yaml
+      minio.yaml
+      mongodb.yaml
+      monitoring-ns.yaml
+      postgres.yaml
+    values/
+      audit-service.yaml
+      document-service.yaml
+      gateway.yaml
+      metadata-service.yaml
+      notification-service.yaml
+      web.yaml
+      workflow-service.yaml
+  terraform/
+    aws-eks/
+      .terraform.lock.hcl
+      versions.tf
+      providers.tf
+      variables.tf
+      main.tf
+      outputs.tf
+      terraform.tfvars.example
+      README.md
+```
+
+Ghi chu:
+
+- `argocd-apps/` chua Argo CD `Application` manifests, apply sau khi Argo CD da duoc cai trong cluster.
+- `k8s/charts/docvault-service/` la Helm chart chung cho cac service DocVault.
+- `k8s/values/*.yaml` la desired state Jenkins cap nhat tren branch `gitops-testing`.
+- `k8s/infra-deps/` la dependency demo cho lan sync dau, gom Postgres, MongoDB, MinIO, Keycloak va secrets.
+- `terraform/aws-eks/` la Terraform source tao VPC/EKS/node group/IAM lien quan.
+- `.terraform/`, `terraform.tfvars`, `tfstate`, va `tfplan` la local generated files, khong commit.
+
 ---
 
 ## 7. Terraform files mau
+
+Repo hien tai da co san cac file Terraform trong `infra/terraform/aws-eks`. Uu tien dung file trong repo lam source of truth. Cac file da duoc bo sung them mot so hardening cho demo EKS: EKS control plane logs, node metadata IMDSv2, encrypted node root volume, va bien `cluster_endpoint_public_access_cidrs` de co the gioi han CIDR truy cap API server.
+
+Terraform cung cai `aws-ebs-csi-driver` EKS add-on va gan `AmazonEBSCSIDriverPolicy` vao node role cho MVP. Infra deps hien tai van dung `emptyDir`, nhung neu sau nay doi Postgres/MongoDB/MinIO sang PVC thi cluster da co storage driver can thiet.
 
 ### 7.1. `versions.tf`
 
@@ -249,7 +323,7 @@ variable "cluster_name" {
 variable "cluster_version" {
   description = "Kubernetes version for EKS"
   type        = string
-  default     = "1.31"
+  default     = "1.35"
 }
 
 variable "environment" {
@@ -258,10 +332,16 @@ variable "environment" {
   default     = "testing"
 }
 
+variable "cluster_endpoint_public_access_cidrs" {
+  description = "CIDR blocks allowed to access the public EKS API endpoint. Replace 0.0.0.0/0 with your workstation public IP CIDR when possible."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
 variable "node_instance_types" {
   description = "EC2 instance types for EKS managed node group"
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.large"]
 }
 
 variable "node_desired_size" {
@@ -280,6 +360,12 @@ variable "node_max_size" {
   description = "Maximum node count"
   type        = number
   default     = 3
+}
+
+variable "node_disk_size" {
+  description = "Encrypted root volume size for each node in GiB"
+  type        = number
+  default     = 30
 }
 
 variable "enable_nat_gateway" {
@@ -319,11 +405,16 @@ module "vpc" {
   public_subnets  = ["10.20.1.0/24", "10.20.2.0/24"]
   private_subnets = ["10.20.11.0/24", "10.20.12.0/24"]
 
-  enable_nat_gateway = var.enable_nat_gateway
-  single_nat_gateway = true
+  enable_nat_gateway      = var.enable_nat_gateway
+  single_nat_gateway      = true
+  map_public_ip_on_launch = true
 
   enable_dns_hostnames = true
   enable_dns_support   = true
+
+  manage_default_security_group  = true
+  default_security_group_ingress = []
+  default_security_group_egress  = []
 
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1
@@ -343,14 +434,22 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.cluster_version
 
-  # Cho phep kubectl/ArgoCD truy cap API server tu Internet trong moi truong demo.
-  # Khi production, can han che CIDR hoac dung private endpoint.
-  cluster_endpoint_public_access = true
+  # Cho phep kubectl/Argo CD truy cap API server tu Internet trong moi truong demo.
+  # Truoc khi apply, nen doi CIDR thanh public IP cua may thao tac, vi du x.x.x.x/32.
+  cluster_endpoint_public_access       = true
+  cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
 
   # De IAM principal tao cluster co quyen admin tren cluster ngay tu dau.
   enable_cluster_creator_admin_permissions = true
 
-  # EKS addons co ban
+  cluster_enabled_log_types = [
+    "api",
+    "audit",
+    "authenticator",
+    "controllerManager",
+    "scheduler",
+  ]
+
   cluster_addons = {
     coredns = {
       most_recent = true
@@ -359,6 +458,9 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
+      most_recent = true
+    }
+    aws-ebs-csi-driver = {
       most_recent = true
     }
   }
@@ -372,14 +474,38 @@ module "eks" {
     docvault = {
       name = "docvault-ng"
 
-      subnet_ids      = module.vpc.public_subnets
-      instance_types  = var.node_instance_types
-      capacity_type   = "ON_DEMAND"
-      disk_size       = 30
+      subnet_ids     = var.enable_nat_gateway ? module.vpc.private_subnets : module.vpc.public_subnets
+      instance_types = var.node_instance_types
+      capacity_type  = "ON_DEMAND"
+      ami_type       = "AL2023_x86_64_STANDARD"
 
       min_size     = var.node_min_size
       max_size     = var.node_max_size
       desired_size = var.node_desired_size
+
+      use_custom_launch_template = true
+
+      iam_role_additional_policies = {
+        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+      }
+
+      metadata_options = {
+        http_endpoint               = "enabled"
+        http_tokens                 = "required"
+        http_put_response_hop_limit = 2
+      }
+
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size           = var.node_disk_size
+            volume_type           = "gp3"
+            encrypted             = true
+            delete_on_termination = true
+          }
+        }
+      }
 
       labels = {
         workload = "docvault"
@@ -420,13 +546,17 @@ output "configure_kubectl" {
 ```hcl
 aws_region      = "ap-southeast-1"
 cluster_name    = "docvault-eks"
-cluster_version = "1.31"
+cluster_version = "1.35"
 environment     = "testing"
 
-node_instance_types = ["t3.medium"]
+# Nen thay 0.0.0.0/0 bang public IP CIDR cua may thao tac, vi du ["203.0.113.10/32"].
+cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
+
+node_instance_types = ["t3.large"]
 node_desired_size   = 2
 node_min_size       = 1
 node_max_size       = 3
+node_disk_size      = 30
 
 # false = tiet kiem chi phi, node nam public subnet
 # true = can NAT Gateway neu node nam private subnet
@@ -445,13 +575,42 @@ Khong commit `terraform.tfvars` neu co thong tin nhay cam.
 
 ## 8. Chay Terraform local lan dau
 
+### 8.1. Pre-flight truoc khi apply
+
+Kiem tra AWS identity:
+
+```bash
+aws sts get-caller-identity
+```
+
+Kiem tra version EKS kha dung trong region. Tai thoi diem 2026-05-05, EKS standard support gom `1.35`, `1.34`, `1.33`; `1.32`, `1.31`, `1.30` dang o extended support. Van nen kiem tra lai region cua ban truoc khi apply:
+
+```bash
+aws eks describe-cluster-versions --region ap-southeast-1
+```
+
+Neu `cluster_endpoint_public_access_cidrs` dang la `0.0.0.0/0`, can nhac doi thanh public IP CIDR cua may thao tac truoc khi apply.
+
+Review secrets truoc khi deploy len AWS:
+
+```bash
+grep -R "password\|secret\|token\|key" infra/k8s/infra-deps infra/k8s/values
+```
+
+Dam bao khong co AWS key, production password, PAT/token that trong repo. Cac secret demo co the chap nhan cho moi truong test rieng tu.
+
+### 8.2. Terraform quality va plan
+
 Tu thu muc `infra/terraform/aws-eks`:
 
 ```bash
+cd infra/terraform/aws-eks
 terraform init
-terraform fmt -recursive
+terraform fmt -check -recursive
 terraform validate
 terraform plan -out tfplan
+checkov -d .
+terraform show tfplan
 ```
 
 Neu plan dung, apply:
@@ -466,6 +625,15 @@ Kiem tra output:
 
 ```bash
 terraform output
+```
+
+Sau khi apply:
+
+```bash
+aws eks update-kubeconfig --region ap-southeast-1 --name docvault-eks
+kubectl get nodes -o wide
+kubectl get sc
+kubectl get pods -A
 ```
 
 ---
@@ -596,73 +764,70 @@ kubectl -n argocd delete secret argocd-initial-admin-secret
 
 ## 12. Xac dinh path GitOps cua repo DocVault
 
-Truoc khi tao Application, can biet Argo CD doc path nao.
+Repo hien tai da co san Argo CD Application manifests trong:
 
-Tu root repo:
+```text
+infra/argocd-apps/
+```
+
+Khong tao them `infra/argocd/docvault-app.yaml` voi `path: infra/k8s`, vi `infra/k8s` dang chua ca chart, values va raw manifests. Neu tro Argo CD truc tiep vao path nay, Argo CD co the render sai cau truc mong muon.
+
+Tu root repo, kiem tra:
 
 ```bash
 find infra/k8s -name Chart.yaml
-find infra/k8s -iname "*application*.yaml"
+find infra/argocd-apps -iname "*.yaml"
 find infra/k8s -maxdepth 3 -type f | sort
 ```
 
-Cac truong hop pho bien:
+Cau truc dung cua repo nay:
 
-| Repo structure | Argo CD `path` nen dung |
+| Thanh phan | Path Argo CD dang dung |
 |---|---|
-| `infra/k8s/Chart.yaml` | `infra/k8s` |
-| `infra/k8s/chart/Chart.yaml` | `infra/k8s/chart` |
-| `infra/k8s/apps/*.yaml` | `infra/k8s/apps` |
-| `infra/k8s/argocd/*.yaml` | co the apply app-of-apps tu path nay |
+| Infra deps | `infra/k8s/infra-deps` |
+| DocVault services | `infra/k8s/charts/docvault-service` + tung `infra/k8s/values/*.yaml` |
+| Argo CD Applications | `infra/argocd-apps/*.yaml` |
 
-Neu chua chac, chay:
+Kiem tra Helm chart:
 
 ```bash
-helm template docvault <path-co-Chart.yaml> -n docvault
+helm template docvault-gateway infra/k8s/charts/docvault-service \
+  -n docvault \
+  -f infra/k8s/values/gateway.yaml
 ```
 
-Neu render duoc YAML, path do co the dung cho Argo CD.
+Neu render duoc YAML, Argo CD co the sync chart nay.
 
 ---
 
-## 13. Tao Argo CD Application cho DocVault
+## 13. Apply Argo CD Applications cho DocVault
 
-Tao file local:
+Dung cac manifest co san trong `infra/argocd-apps`.
 
-```bash
-mkdir -p infra/argocd
-cat > infra/argocd/docvault-app.yaml <<'YAML'
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: docvault
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/daithang59/docvault.git
-    targetRevision: gitops-testing
-    path: infra/k8s
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: docvault
-  syncPolicy:
-    syncOptions:
-      - CreateNamespace=true
-YAML
-```
+Neu repo GitHub la private, hay lam muc 14 de add repo credential truoc khi apply/sync cac Application. Neu khong, Argo CD co the tao Application nhung khong fetch duoc source.
 
-Sua `path: infra/k8s` neu repo cua ban co Helm chart/manifests o path khac.
-
-Apply:
+Apply infra deps truoc:
 
 ```bash
-kubectl apply -f infra/argocd/docvault-app.yaml
+kubectl apply -f infra/argocd-apps/docvault-infra.yaml
 kubectl get applications -n argocd
-kubectl describe application docvault -n argocd
 ```
 
-> Khuyen nghi: lan dau de manual sync. Chua bat `automated`, chua bat `prune`.
+Sau do apply cac service DocVault:
+
+```bash
+kubectl apply -f infra/argocd-apps/docvault-apps.yaml
+kubectl get applications -n argocd
+kubectl describe application docvault-gateway -n argocd
+```
+
+Neu muon monitoring sau khi app on dinh:
+
+```bash
+kubectl apply -f infra/argocd-apps/monitoring.yaml
+```
+
+Khuyen nghi: lan dau de manual sync. Cac manifest Argo CD hien khong bat `automated`, khong bat `prune`.
 
 ---
 
@@ -697,20 +862,64 @@ argocd repo add https://github.com/daithang59/docvault.git \
 
 ## 15. Sync DocVault lan dau
 
+### 15.1. Pre-flight truoc khi sync
+
+Kiem tra Argo CD:
+
+```bash
+kubectl get pods -n argocd
+argocd repo list
+```
+
+Kiem tra branch GitOps va image refs:
+
+```bash
+git checkout gitops-testing
+git pull
+git log -1
+grep -R 'tag: "v' infra/k8s/values
+grep -R 'digest: "sha256:' infra/k8s/values || true
+```
+
+Kiem tra Helm render:
+
+```bash
+helm template docvault-gateway infra/k8s/charts/docvault-service \
+  -n docvault \
+  -f infra/k8s/values/gateway.yaml
+```
+
+### 15.2. Sync
+
 Trong UI:
 
-1. Mo app `docvault`.
-2. Neu status `OutOfSync`, bam `Sync`.
-3. Chon `Synchronize`.
-4. Theo doi resource tree.
+1. Sync app `docvault-infra-deps` truoc.
+2. Sync cac app service: `docvault-gateway`, `docvault-metadata`, `docvault-document-service`, `docvault-workflow-service`, `docvault-audit-service`, `docvault-notification-service`, `docvault-web`.
+3. Neu status `OutOfSync`, bam `Sync`.
+4. Chon `Synchronize`.
+5. Theo doi resource tree.
 
 Bang CLI:
 
 ```bash
-argocd app get docvault
-argocd app sync docvault
-argocd app wait docvault --health --timeout 300
+argocd app sync docvault-infra-deps
+argocd app wait docvault-infra-deps --health --timeout 300
+
+for app in \
+  docvault-gateway \
+  docvault-metadata \
+  docvault-document-service \
+  docvault-workflow-service \
+  docvault-audit-service \
+  docvault-notification-service \
+  docvault-web
+do
+  argocd app sync "$app"
+  argocd app wait "$app" --health --timeout 300
+done
 ```
+
+Neu sync bang UI thi sync infra deps truoc, roi sync cac service.
 
 Kiem tra Kubernetes:
 
@@ -730,7 +939,7 @@ kubectl get ingress -n docvault
 Binh thuong. Bam Sync hoac:
 
 ```bash
-argocd app sync docvault
+argocd app sync <application-name>
 ```
 
 ### 16.2. Application Degraded
@@ -745,8 +954,14 @@ kubectl describe <kind> <name> -n docvault
 
 ```bash
 kubectl describe pod <pod-name> -n docvault
-kubectl get nodes
-kubectl top nodes
+kubectl get nodes -o wide
+kubectl describe node <node-name>
+```
+
+`kubectl top nodes` chi dung duoc sau khi cluster co metrics-server hoac monitoring tuong duong. Neu can metrics-server cho debug:
+
+```bash
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 ```
 
 Nguyen nhan hay gap:
@@ -981,6 +1196,8 @@ Khuyen nghi lam remote state sau khi ban da apply thanh cong local lan dau.
 - [ ] `aws sts get-caller-identity` thanh cong.
 - [ ] Tao `infra/terraform/aws-eks`.
 - [ ] Them `versions.tf`, `providers.tf`, `variables.tf`, `main.tf`, `outputs.tf`.
+- [ ] Kiem tra EKS version bang `aws eks describe-cluster-versions --region ap-southeast-1`.
+- [ ] Review `cluster_endpoint_public_access_cidrs` va secrets demo truoc khi apply.
 - [ ] Chay `terraform init`.
 - [ ] Chay `terraform validate`.
 - [ ] Chay `terraform plan`.
@@ -996,14 +1213,17 @@ Khuyen nghi lam remote state sau khi ban da apply thanh cong local lan dau.
 - [ ] Port-forward UI.
 - [ ] Login admin.
 - [ ] Doi password admin.
+- [ ] Neu repo private, add repo credential truoc khi apply/sync Application.
 
 ### Ngay 3: Argo CD Application
 
-- [ ] Xac dinh dung GitOps path bang `find infra/k8s -name Chart.yaml`.
-- [ ] Tao `docvault-app.yaml`.
-- [ ] Apply Application.
-- [ ] App xuat hien trong Argo CD UI.
-- [ ] Sync lan dau.
+- [ ] Xac dinh chart bang `find infra/k8s -name Chart.yaml`.
+- [ ] Xac nhan manifest co san trong `infra/argocd-apps`.
+- [ ] Chay Helm render pre-flight cho gateway.
+- [ ] Apply `infra/argocd-apps/docvault-infra.yaml`.
+- [ ] Apply `infra/argocd-apps/docvault-apps.yaml`.
+- [ ] Cac Applications DocVault xuat hien trong Argo CD UI.
+- [ ] Sync `docvault-infra-deps` truoc, sau do sync cac service app.
 - [ ] Ghi lai loi neu co.
 
 ### Ngay 4: Fix runtime
@@ -1033,8 +1253,8 @@ Milestone nay duoc xem la xong khi:
 - [ ] `kubectl get nodes` co node `Ready`.
 - [ ] Argo CD pod `Running`.
 - [ ] Vao duoc Argo CD UI.
-- [ ] Application `docvault` tro dung repo `docvault`, branch `gitops-testing`.
-- [ ] Argo CD sync duoc it nhat mot lan.
+- [ ] Applications `docvault-infra-deps` va cac DocVault services tro dung repo `docvault`, branch `gitops-testing`.
+- [ ] Argo CD sync duoc it nhat mot lan cho infra deps va cac service app.
 - [ ] Namespace `docvault` co resource duoc tao.
 - [ ] Gateway/Web health pass hoac co loi runtime cu the de fix.
 - [ ] Co evidence: Terraform output, Argo CD UI, kubectl output, Jenkins GitOps commit.
@@ -1060,7 +1280,18 @@ kubectl get ingress -A
 Neu co Service type LoadBalancer/Ingress, xoa app truoc:
 
 ```bash
-kubectl delete application docvault -n argocd --ignore-not-found
+kubectl delete application \
+  docvault-infra-deps \
+  docvault-gateway \
+  docvault-metadata \
+  docvault-document-service \
+  docvault-workflow-service \
+  docvault-audit-service \
+  docvault-notification-service \
+  docvault-web \
+  monitoring-stack \
+  -n argocd \
+  --ignore-not-found
 kubectl delete namespace docvault --ignore-not-found
 ```
 
@@ -1072,6 +1303,9 @@ Sau do moi `terraform destroy`.
 
 - HashiCorp Terraform EKS tutorial: https://developer.hashicorp.com/terraform/tutorials/kubernetes/eks
 - Terraform AWS EKS module: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest
+- Amazon EKS Kubernetes version lifecycle: https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
+- Amazon EKS platform versions: https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html
+- Amazon EBS CSI driver: https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html
 - AWS CLI `update-kubeconfig`: https://docs.aws.amazon.com/cli/latest/reference/eks/update-kubeconfig.html
 - AWS EKS kubeconfig guide: https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html
 - Argo CD Getting Started: https://argo-cd.readthedocs.io/en/stable/getting_started/

@@ -9,9 +9,8 @@ image:
 healthPath: /api/health
 
 service:
-  type: NodePort
+  type: ClusterIP
   port: 3000
-  nodePort: 30000
 env:
   NODE_ENV: production
   PORT: "3000"
@@ -19,9 +18,9 @@ env:
   KEYCLOAK_REALM: "docvault"
   KEYCLOAK_AUDIENCE: "docvault-gateway"
   KEYCLOAK_CLIENT_ID: "docvault-gateway"
-  GATEWAY_URL: "http://10.0.3.138:30000"
-  FRONTEND_URL: "http://10.0.3.138:30006"
-  ALLOWED_ORIGINS: "http://10.0.3.138:30006"
+  GATEWAY_URL: "http://localhost:30000"
+  FRONTEND_URL: "http://localhost:30006"
+  ALLOWED_ORIGINS: "http://localhost:30006,http://localhost:3006"
   METADATA_SERVICE_URL: "http://docvault-metadata:3001"
   DOCUMENT_SERVICE_URL: "http://docvault-document-service:3002"
   WORKFLOW_SERVICE_URL: "http://docvault-workflow-service:3003"
