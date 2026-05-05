@@ -15,7 +15,7 @@ service:
 env:
   NODE_ENV: production
   PORT: "3002"
-  KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  KEYCLOAK_BASE_URL: "http://keycloak:18080"
   KEYCLOAK_REALM: "docvault"
   KEYCLOAK_AUDIENCE: "docvault-gateway"
   METADATA_SERVICE_URL: "http://docvault-metadata:3001"
