@@ -13,7 +13,8 @@ service:
 env:
   NODE_ENV: production
   PORT: "3000"
-  KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  KEYCLOAK_BASE_URL: "http://10.0.3.134:30080"
+  FRONTEND_URL: "http://10.0.3.134:30006"
   METADATA_SERVICE_URL: "http://docvault-metadata:3001"
   DOCUMENTS_SERVICE_URL: "http://docvault-document-service:3002"
   WORKFLOW_SERVICE_URL: "http://docvault-workflow-service:3003"

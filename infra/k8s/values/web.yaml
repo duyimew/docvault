@@ -12,6 +12,8 @@ env:
   NODE_ENV: production
   PORT: "3006"
   NEXT_PUBLIC_API_BASE_URL: "http://10.0.3.134:30000/api"
+  KEYCLOAK_BASE_URL: "http://10.0.3.134:30080"
+  FRONTEND_URL: "http://10.0.3.134:30006"
 
 probes:
   path: /api/health

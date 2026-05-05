@@ -65,9 +65,17 @@ data:
           "redirectUris": [
             "http://localhost:3000/*",
             "http://localhost:3006/*",
-            "http://localhost:3006/api/auth/callback"
+            "http://localhost:3006/api/auth/callback",
+            "http://10.0.3.134:30000/*",
+            "http://10.0.3.134:30006/*",
+            "http://10.0.3.134:30006/api/auth/callback"
           ],
-          "webOrigins": ["http://localhost:3000", "http://localhost:3006"],
+          "webOrigins": [
+            "http://localhost:3000",
+            "http://localhost:3006",
+            "http://10.0.3.134:30000",
+            "http://10.0.3.134:30006"
+          ],
           "attributes": {
             "access.token.lifespan": "900"
           },

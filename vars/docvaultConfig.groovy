@@ -19,6 +19,6 @@ def call() {
         helmValuesDir: 'infra/k8s/values',
         gitOpsBranch: gitOpsBranch,
         gitOpsRepoUrl: 'https://github.com/duyimew/docvault.git',
-        zapTarget: 'http://10.0.3.138:30000/api'
+        zapTarget: 'http://10.0.3.134:30000/api'
     ]
 }
