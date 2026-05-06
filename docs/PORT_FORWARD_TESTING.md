@@ -18,7 +18,7 @@ ping keycloak
 
 ## 2. Chay port-forward
 
-Mo 3 PowerShell terminal rieng, moi terminal chay 1 lenh va de nguyen khong tat.
+Mo 4 PowerShell terminal rieng, moi terminal chay 1 lenh va de nguyen khong tat.
 
 ### Web app
 
@@ -65,6 +65,22 @@ Truy cap Keycloak:
 ```text
 http://keycloak:18080
 ```
+
+### Argo CD
+
+Khong dung local port `8080` neu may dang chay Jenkins. Dung port `18081`:
+
+```powershell
+kubectl port-forward -n argocd svc/argocd-server 18081:443
+```
+
+Truy cap Argo CD:
+
+```text
+https://localhost:18081
+```
+
+Neu browser canh bao certificate self-signed, chon tiep tuc vao trang.
 
 ## 3. Dang nhap demo
 
@@ -148,6 +164,12 @@ Kiem tra Argo CD health:
 
 ```powershell
 kubectl get applications -n argocd
+```
+
+Kiem tra Argo CD UI port-forward:
+
+```text
+https://localhost:18081
 ```
 
 Neu browser bao `ERR_CONNECTION_REFUSED` toi `localhost:3000`, gateway port-forward chua chay hoac bi tat:
