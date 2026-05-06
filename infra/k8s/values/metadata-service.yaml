@@ -22,3 +22,15 @@ env:
 envFrom:
   - secretRef:
       name: docvault-app-secrets
+
+migration:
+  enabled: true
+  command: "./node_modules/.bin/prisma migrate deploy"
+  backoffLimit: 3
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi

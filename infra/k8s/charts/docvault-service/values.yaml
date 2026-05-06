@@ -29,3 +29,9 @@ env:
   NODE_ENV: production
 
 envFrom: []
+
+migration:
+  enabled: false
+  command: "./node_modules/.bin/prisma migrate deploy"
+  backoffLimit: 3
+  resources: {}
