@@ -32,7 +32,6 @@ PowerShell:
 ```powershell
 $env:AWS_REGION="ap-southeast-1"
 $env:CLUSTER_NAME="docvault-eks"
-$env:NODEGROUP_NAME="docvault-ng"
 $env:DOCVAULT_NS="docvault"
 $env:ARGOCD_NS="argocd"
 ```
@@ -42,7 +41,6 @@ Bash:
 ```bash
 export AWS_REGION=ap-southeast-1
 export CLUSTER_NAME=docvault-eks
-export NODEGROUP_NAME=docvault-ng
 export DOCVAULT_NS=docvault
 export ARGOCD_NS=argocd
 ```
@@ -51,6 +49,47 @@ Kiem tra dang dung dung AWS account:
 
 ```bash
 aws sts get-caller-identity
+```
+
+Lay dung ten managed node group. Terraform module co the tao ten that co suffix, vi du `docvault-ng-20260505092814132600000013`, nen khong nen hardcode `docvault-ng`.
+
+PowerShell:
+
+```powershell
+$env:NODEGROUP_NAME = aws eks list-nodegroups `
+  --region $env:AWS_REGION `
+  --cluster-name $env:CLUSTER_NAME `
+  --query "nodegroups[?starts_with(@, 'docvault-ng')]|[0]" `
+  --output text
+
+Write-Host "NODEGROUP_NAME=$env:NODEGROUP_NAME"
+```
+
+Bash:
+
+```bash
+export NODEGROUP_NAME=$(
+  aws eks list-nodegroups \
+    --region "$AWS_REGION" \
+    --cluster-name "$CLUSTER_NAME" \
+    --query "nodegroups[?starts_with(@, 'docvault-ng')]|[0]" \
+    --output text
+)
+
+echo "NODEGROUP_NAME=$NODEGROUP_NAME"
+```
+
+Neu dang o thu muc Terraform va state local con dung, co the lay tu output sau khi da apply/refresh output moi:
+
+```bash
+cd infra/terraform/aws-eks
+terraform output -raw node_group_name
+```
+
+Neu output nay chua co trong state, dung AWS CLI `list-nodegroups` o tren hoac doc truc tiep tu state:
+
+```bash
+terraform state show 'module.eks.module.eks_managed_node_group["docvault"].aws_eks_node_group.this[0]'
 ```
 
 ---
@@ -377,4 +416,3 @@ argocd app sync docvault-web
 - [ ] Argo CD pods `Running`.
 - [ ] DocVault pods `Running` hoac loi ro rang.
 - [ ] Gateway health pass bang port-forward.
-
