@@ -13,6 +13,8 @@ metadata:
     argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
     argocd.argoproj.io/sync-wave: "-1"
+    checkov.io/skip1: CKV_K8S_8=Prisma migration is a short-lived Job; liveness probes are for long-running workloads.
+    checkov.io/skip2: CKV_K8S_9=Prisma migration is a short-lived Job; readiness probes are not used for one-shot hooks.
 spec:
   backoffLimit: {{ .Values.migration.backoffLimit | default 3 }}
   template:
