@@ -15,6 +15,10 @@ env:
   NODE_ENV: production
   PORT: "3006"
   NEXT_PUBLIC_APP_NAME: "DocVault"
-  NEXT_PUBLIC_API_BASE_URL: "http://localhost:30000/api"
+  NEXT_PUBLIC_API_BASE_URL: "http://localhost:3000/api"
   GATEWAY_URL: "http://docvault-gateway:3000"
-  FRONTEND_URL: "http://localhost:30006"
+  FRONTEND_URL: "http://localhost:3006"
+  KEYCLOAK_BROWSER_BASE_URL: "http://keycloak:18080"
+  KEYCLOAK_INTERNAL_BASE_URL: "http://keycloak:8080"
+  KEYCLOAK_REALM: "docvault"
+  KEYCLOAK_CLIENT_ID: "docvault-gateway"

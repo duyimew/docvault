@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const KC_BASE = process.env.KEYCLOAK_BASE_URL ?? 'http://localhost:8080';
+const KC_BASE =
+  process.env.KEYCLOAK_INTERNAL_BASE_URL ??
+  process.env.KEYCLOAK_BASE_URL ??
+  'http://localhost:8080';
 const KC_REALM = process.env.KEYCLOAK_REALM ?? 'docvault';
 const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? 'docvault-gateway';
 const CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'dev-gateway-secret';

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
-const KC_BASE = process.env.KEYCLOAK_BASE_URL ?? 'http://localhost:8080';
+const KC_BROWSER_BASE =
+  process.env.KEYCLOAK_BROWSER_BASE_URL ??
+  process.env.KEYCLOAK_BASE_URL ??
+  'http://localhost:8080';
 const KC_REALM = process.env.KEYCLOAK_REALM ?? 'docvault';
 const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? 'docvault-gateway';
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3006';
@@ -10,7 +13,7 @@ export async function GET() {
   const nonce = Math.random().toString(36).slice(2);
   const callbackUrl = `${FRONTEND_URL}/api/auth/callback`;
 
-  const authUrl = `${KC_BASE}/realms/${KC_REALM}/protocol/openid-connect/auth?${new URLSearchParams({
+  const authUrl = `${KC_BROWSER_BASE}/realms/${KC_REALM}/protocol/openid-connect/auth?${new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: callbackUrl,
     response_type: 'code',
