@@ -1,16 +1,24 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: minio
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app: minio
+    component: minio
 spec:
+  serviceName: minio
   replicas: 1
   selector:
     matchLabels:
       app: minio
+      component: minio
   template:
     metadata:
       labels:
         app: minio
+        component: minio
     spec:
       containers:
         - name: minio
@@ -29,9 +37,16 @@ spec:
           volumeMounts:
             - name: minio-data
               mountPath: /data
-      volumes:
-        - name: minio-data
-          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: minio-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: docvault-gp3
+        resources:
+          requests:
+            storage: 20Gi
 ---
 apiVersion: v1
 kind: Service
@@ -40,6 +55,7 @@ metadata:
 spec:
   selector:
     app: minio
+    component: minio
   ports:
     - name: api
       protocol: TCP

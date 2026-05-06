@@ -8,18 +8,26 @@ stringData:
   MONGO_INITDB_ROOT_PASSWORD: rootpw
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: mongo
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app: mongo
+    component: mongodb
 spec:
+  serviceName: mongo
   replicas: 1
   selector:
     matchLabels:
       app: mongo
+      component: mongodb
   template:
     metadata:
       labels:
         app: mongo
+        component: mongodb
     spec:
       containers:
         - name: mongodb
@@ -42,9 +50,16 @@ spec:
           volumeMounts:
             - name: mongo-data
               mountPath: /data/db
-      volumes:
-        - name: mongo-data
-          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: docvault-gp3
+        resources:
+          requests:
+            storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
@@ -53,6 +68,7 @@ metadata:
 spec:
   selector:
     app: mongo
+    component: mongodb
   ports:
     - protocol: TCP
       port: 27017

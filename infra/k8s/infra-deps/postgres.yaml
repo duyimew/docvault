@@ -33,18 +33,26 @@ data:
     );
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: db
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app: db
+    component: postgres
 spec:
+  serviceName: db
   replicas: 1
   selector:
     matchLabels:
       app: db
+      component: postgres
   template:
     metadata:
       labels:
         app: db
+        component: postgres
     spec:
       containers:
         - name: postgres
@@ -69,6 +77,8 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: postgres-init
               mountPath: /docker-entrypoint-initdb.d/init.sql
@@ -83,12 +93,20 @@ spec:
         - name: postgres-init
           configMap:
             name: postgres-init-sql
-        - name: postgres-data
-          emptyDir: {}
         - name: postgres-tmp
           emptyDir: {}
         - name: postgres-run
           emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: docvault-gp3
+        resources:
+          requests:
+            storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
@@ -97,6 +115,7 @@ metadata:
 spec:
   selector:
     app: db
+    component: postgres
   ports:
     - protocol: TCP
       port: 5432
