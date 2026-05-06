@@ -56,7 +56,7 @@ Blocker còn lại lớn nhất:
 | Sonar quality gate | Fail pipeline khi quality gate fail. | `sonarSast.groovy` chỉ chạy scanner, chưa thấy `waitForQualityGate`. | Chưa là gate thật. | Medium | Thêm stage `Quality Gate` sau Sonar hoặc cấu hình fail condition rõ. |
 | Trivy FS gate | Fail khi có HIGH/CRITICAL. | `trivyFsScan.groovy` thiếu `--exit-code 1`. | Có thể chỉ report, không chặn. | Medium | Thêm `--exit-code 1` hoặc policy severity rõ. |
 | Dependency-Check gate | Fail hoặc policy rõ. | `--failOnCVSS 7` nhưng bọc `catchError(... UNSTABLE)`. | Không chặn pipeline. | Medium | Quyết định SCA là blocking hay non-blocking; MVP nên blocking sau khi baseline sạch. |
-| ZAP | Chạy khi target có gateway thật. | `DAST - OWASP ZAP` luôn chạy cuối với hardcoded `zapTarget`. | Dễ fail khi chưa deploy cluster. | Medium | Tạm gate bằng parameter `RUN_ZAP` hoặc chỉ bật sau khi ArgoCD deploy xong. |
+| ZAP | Chạy khi target có gateway thật. | `DAST - OWASP ZAP` được gate bằng `RUN_ZAP` và yêu cầu `ZAP_TARGET`. | Dễ fail nếu target chưa reachable từ Jenkins/ZAP container. | Medium | Chỉ bật sau khi ArgoCD deploy xong và Jenkins container curl được Gateway URL. |
 | Secrets | Secrets không hardcode trong Git. | `infra/k8s/infra-deps/app-secrets.yaml` chứa secret dev dạng plaintext. | Chấp nhận demo, không production. | Medium | Gắn nhãn dev-only; về sau dùng SealedSecrets/ExternalSecrets. |
 | Terraform | Plan yêu cầu Terraform nền tảng. | Không thấy file `.tf`. | Thiếu Phase 2 theo kế hoạch. | Medium | Chưa cần nếu dùng local cluster; ghi rõ deferred. |
 | Observability | Metrics, dashboard, logs tập trung. | Có kube-prometheus-stack app; chưa thấy app metrics/ServiceMonitor/Loki. | Chưa đủ demo runtime evidence. | Medium | Sau CI/CD, thêm app metrics hoặc dashboard tối thiểu; Loki để sau nếu thiếu thời gian. |
@@ -92,7 +92,7 @@ Blocker còn lại lớn nhất:
 
 - Thêm Sonar quality gate stage.
 - Thêm `--exit-code 1` cho Trivy FS nếu muốn chặn HIGH/CRITICAL.
-- Thêm parameter `RUN_ZAP=false` mặc định cho lần CI đầu.
+- Giữ `RUN_ZAP=false` mặc định; chỉ điền `ZAP_TARGET` và bật ZAP sau khi Gateway reachable.
 - Chạy `pnpm test:e2e` sau khi local full stack healthy và lưu evidence vào docs.
 
 ### Optional

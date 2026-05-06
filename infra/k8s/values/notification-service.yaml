@@ -1,5 +1,5 @@
 # notification-service values
-namespace: default
+namespace: docvault
 
 image:
   repository: daithang59/notification-service
@@ -9,9 +9,8 @@ image:
 healthPath: /health
 
 service:
-  type: NodePort
+  type: ClusterIP
   port: 3005
-  nodePort: 30005
 env:
   NODE_ENV: production
   PORT: "3005"

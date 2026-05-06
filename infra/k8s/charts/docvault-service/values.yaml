@@ -2,13 +2,13 @@
 # This file will be overwritten for each service (gateway, metadata, etc.)
 
 replicaCount: 1
-namespace: default
+namespace: docvault
 
 image:
-  repository: daithang59/gateway
-  pullPolicy: IfNotPresent
+  repository: daithang59/docvault-service
+  pullPolicy: Always
   # Overridden by Jenkins during build
-  tag: "latest"
+  tag: "0.1.0"
   digest: ""
 
 service:

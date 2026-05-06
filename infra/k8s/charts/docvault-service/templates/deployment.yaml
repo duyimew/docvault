@@ -29,6 +29,7 @@ spec:
       containers:
         - name: {{ .Release.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}{{- if and $imageDigest (ne $imageDigest $zeroDigest) }}@{{ $imageDigest }}{{- end }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

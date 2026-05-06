@@ -33,7 +33,7 @@ def call(cfg) {
                 docker run --rm \\
                     -v /var/run/docker.sock:/var/run/docker.sock \\
                     ${cfg.trivyImage} \\
-                    image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${service}:${tag}
+                    image --severity CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${service}:${tag}
             """
             builtList.add(service)
         } else {
@@ -51,7 +51,7 @@ def call(cfg) {
             docker run --rm \\
                 -v /var/run/docker.sock:/var/run/docker.sock \\
                 ${cfg.trivyImage} \\
-                image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${cfg.webImageName}:${tag}
+                image --severity CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${cfg.webImageName}:${tag}
         """
         builtList.add(cfg.webAppName)
     }

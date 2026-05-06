@@ -1,5 +1,5 @@
 # metadata-service values
-namespace: default
+namespace: docvault
 
 image:
   repository: daithang59/metadata-service
@@ -9,9 +9,8 @@ image:
 healthPath: /health
 
 service:
-  type: NodePort
+  type: ClusterIP
   port: 3001
-  nodePort: 30001
 env:
   NODE_ENV: production
   PORT: "3001"
