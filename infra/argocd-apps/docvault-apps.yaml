@@ -16,6 +16,9 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: docvault
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
 ---
@@ -37,6 +40,9 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: docvault
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
 ---
@@ -58,6 +64,9 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: docvault
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
 ---
@@ -79,6 +88,9 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: docvault
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
 ---
@@ -100,6 +112,9 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: docvault
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
 ---
@@ -121,6 +136,9 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: docvault
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
 ---
@@ -142,5 +160,8 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: docvault
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
