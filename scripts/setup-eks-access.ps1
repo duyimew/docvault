@@ -27,11 +27,16 @@ Write-Host "`n[1/3] Detecting node external IP..." -ForegroundColor Yellow
 $nodeIp = ""
 $maxAttempts = 12
 for ($i = 1; $i -le $maxAttempts; $i++) {
-    $ips = kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}' 2>$null
-    if ($ips) {
-        $nodeIp = ($ips -split '\s+')[0]
-        break
+    # Parse 'kubectl get nodes -o wide' — EXTERNAL-IP is column 7
+    $lines = kubectl get nodes -o wide 2>$null | Select-Object -Skip 1
+    foreach ($line in $lines) {
+        $cols = $line -split '\s+'
+        if ($cols.Length -ge 7 -and $cols[6] -ne '<none>') {
+            $nodeIp = $cols[6]
+            break
+        }
     }
+    if ($nodeIp) { break }
     Write-Host "  Attempt $i/$maxAttempts - no nodes with ExternalIP yet, waiting 15s..."
     Start-Sleep -Seconds 15
 }
