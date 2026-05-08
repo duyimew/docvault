@@ -9,6 +9,7 @@ def call(Map cfg = [:]) {
     String sources          = cfg.sonarSources ?: 'apps,services,libs'
     String exclusions       = cfg.sonarExclusions ?: '**/node_modules/**,**/.pnpm-store/**,**/dist/**,**/.next/**,**/coverage/**,infra/**,charts/**,checkov-report/**,dependency-check-report/**,Dockerfile.jenkins,**/.scannerwork/**'
     String hostOverride     = cfg.sonarHostUrl ?: 'http://sonarqube:9000'
+    String dockerRunArgs    = cfg.sonarDockerRunArgs ?: '--network host --add-host=host.docker.internal:host-gateway'
     String extraArgs        = cfg.extraArgs ?: ''
     boolean enforceQG       = cfg.containsKey('enforceQualityGate') ? cfg.enforceQualityGate : false
     int qgTimeoutMinutes    = (cfg.qualityGateTimeoutMinutes ?: 10) as int
@@ -26,9 +27,10 @@ def call(Map cfg = [:]) {
             echo ">>> Sonar project key      : ${projectKey}"
             echo ">>> Sonar project name     : ${projectName}"
             echo ">>> Sonar sources          : ${sources}"
+            echo ">>> Sonar docker args      : ${dockerRunArgs}"
 
             docker run --rm \\
-                --network host \\
+                ${dockerRunArgs} \\
                 -v "${env.WORKSPACE}:/usr/src" \\
                 -v "${env.WORKSPACE}/.sonar-cache:/opt/sonar-scanner/.sonar/cache" \\
                 -w /usr/src \\

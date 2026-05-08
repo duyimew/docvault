@@ -11,6 +11,7 @@ def call() {
         sonarQubeInstallation: 'sqdocvault',
         sonarProjectKey: 'docvault',
         sonarHostUrl: sonarHostUrl,
+        sonarDockerRunArgs: '--network host --add-host=host.docker.internal:host-gateway',
         checkovImage: 'bridgecrew/checkov:latest',
         terraformImage: 'hashicorp/terraform:1.8.5',
         terraformDir: 'infra/terraform/aws-eks',
