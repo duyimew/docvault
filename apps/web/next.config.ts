@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
-const GATEWAY_URL = process.env.GATEWAY_URL ?? 'http://localhost:3000';
+const DEFAULT_GATEWAY_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'http://docvault-gateway:3000'
+    : 'http://localhost:3000';
+
+const GATEWAY_URL = process.env.GATEWAY_URL ?? DEFAULT_GATEWAY_URL;
 
 const nextConfig: NextConfig = {
   output: 'standalone',

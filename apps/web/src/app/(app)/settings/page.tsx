@@ -6,6 +6,7 @@ import { RoleBadge } from '@/components/badges/role-badge';
 import { User, Globe, Shield, KeyRound, AtSign, Hash } from 'lucide-react';
 import { UserRole } from '@/types/auth';
 import { cn } from '@/lib/utils/cn';
+import { env } from '@/config/env';
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -121,12 +122,12 @@ export default function SettingsPage() {
         <InfoCard
           icon={<User size={15} className="text-[var(--color-primary)]" />}
           label="Application"
-          value={process.env.NEXT_PUBLIC_APP_NAME ?? 'DocVault'}
+          value={env.APP_NAME}
         />
         <InfoCard
           icon={<Globe size={15} className="text-[var(--color-primary)]" />}
           label="API Gateway URL"
-          value={process.env.NEXT_PUBLIC_API_BASE_URL ?? 'Not configured'}
+          value={env.API_BASE_URL}
           mono
           muted
         />
