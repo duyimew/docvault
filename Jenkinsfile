@@ -179,12 +179,12 @@ pipeline {
         stage('Push & GitOps') {
             when {
                 expression {
-                    return builtServicesCsv?.trim()
+                    return builtServicesCsv?.trim() || env.INFRA_CHANGED == 'true'
                 }
             }
             steps {
                 script {
-                    echo ">>> Push & GitOps with builtServicesCsv='${builtServicesCsv}'"
+                    echo ">>> Push & GitOps with builtServicesCsv='${builtServicesCsv}', INFRA_CHANGED='${env.INFRA_CHANGED}'"
                     pushAndGitOps(cfg, builtServicesCsv)
                 }
             }

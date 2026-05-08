@@ -20,6 +20,10 @@ def call(cfg) {
         echo '>>> Force-build mode enabled; all impacted images will be rebuilt and rescanned.'
     }
 
+    def infraChanged = forceBuildAll || changedFiles.any { it.startsWith('infra/k8s/') }
+    env.INFRA_CHANGED = infraChanged ? 'true' : 'false'
+    echo ">>> Infrastructure (infra/k8s/) changes detected: ${infraChanged}"
+
     cfg.services.each { service ->
         def changed = forceBuildAll || isServiceImpacted(service, changedFiles)
 

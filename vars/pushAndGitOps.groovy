@@ -1,17 +1,22 @@
 def call(cfg, builtServicesCsv) {
     def tag = "v${env.BUILD_NUMBER}"
     def builtList = parseBuiltServices(builtServicesCsv)
+    def infraChanged = env.INFRA_CHANGED == 'true'
 
-    if (!builtList) {
-        echo '>>> No built services to publish.'
+    if (!builtList && !infraChanged) {
+        echo '>>> No built services and no infra changes. Nothing to publish.'
         return
     }
 
     def targetBranch = cfg.gitOpsBranch
     echo ">>> GitOps target branch: ${targetBranch}"
 
-    def imageDigests = pushImages(cfg, builtList, tag)
-    updateGitOpsBranch(cfg, builtList, tag, imageDigests, targetBranch)
+    def imageDigests = [:]
+    if (builtList) {
+        imageDigests = pushImages(cfg, builtList, tag)
+    }
+
+    updateGitOpsBranch(cfg, builtList, tag, imageDigests, targetBranch, infraChanged)
 }
 
 def parseBuiltServices(builtServicesCsv) {
@@ -94,8 +99,8 @@ def resolveImageDigest(repository, tag) {
     return digest
 }
 
-def updateGitOpsBranch(cfg, builtList, tag, imageDigests, targetBranch) {
-    echo '>>> Updating Helm values with new image references...'
+def updateGitOpsBranch(cfg, builtList, tag, imageDigests, targetBranch, infraChanged) {
+    echo '>>> Updating GitOps branch with new references...'
 
     def askPassScript = '.git-askpass.sh'
     def gitOpsWorktree = sh(script: 'mktemp -d', returnStdout: true).trim()
@@ -126,6 +131,12 @@ EOF
 
                 sh "git clone --single-branch --branch '${targetBranch}' '${cfg.gitOpsRepoUrl}' '${gitOpsWorktree}'"
 
+                // ── Step 1: Sync infra/k8s files if infrastructure changed ──
+                if (infraChanged) {
+                    syncInfraFiles(cfg, gitOpsWorktree)
+                }
+
+                // ── Step 2: Update image tags for newly built services ──
                 builtList.each { service ->
                     def fileName = valuesFileForService(cfg, service)
                     def valuesFile = "${gitOpsWorktree}/${cfg.helmValuesDir}/${fileName}"
@@ -134,26 +145,35 @@ EOF
                     sh """
                         set -eu
                         test -f '${valuesFile}'
-                        sed -i -E 's/^([[:space:]]*)tag:.*/\\1tag: "${tag}"/' '${valuesFile}'
-                        sed -i -E 's/^([[:space:]]*)digest:.*/\\1digest: "${digest}"/' '${valuesFile}'
+                        sed -i -E 's/^([[:space:]]*)tag:.*/\\1tag: \"${tag}\"/' '${valuesFile}'
+                        sed -i -E 's/^([[:space:]]*)digest:.*/\\1digest: \"${digest}\"/' '${valuesFile}'
                     """
                 }
 
                 def changed = sh(
-                    script: "git -C '${gitOpsWorktree}' status --porcelain -- '${cfg.helmValuesDir}'",
+                    script: "git -C '${gitOpsWorktree}' status --porcelain",
                     returnStdout: true
                 ).trim()
                 if (!changed) {
-                    echo '>>> No Helm value updates detected. Skipping GitOps commit/push.'
+                    echo '>>> No updates detected. Skipping GitOps commit/push.'
                     return
                 }
+
+                def commitParts = []
+                if (builtList) {
+                    commitParts.add("image refs for ${builtList.join(',')} to ${tag}")
+                }
+                if (infraChanged) {
+                    commitParts.add("infra/k8s manifests")
+                }
+                def commitMsg = "chore(gitops): update ${commitParts.join(' + ')} [skip ci]"
 
                 sh """
                     set -eu
                     git -C '${gitOpsWorktree}' config user.email "daithang59@users.noreply.github.com"
                     git -C '${gitOpsWorktree}' config user.name "daithang59"
-                    git -C '${gitOpsWorktree}' add '${cfg.helmValuesDir}'/*.yaml
-                    git -C '${gitOpsWorktree}' commit -m "chore(gitops): update image refs for ${builtList.join(',')} to ${tag} [skip ci]"
+                    git -C '${gitOpsWorktree}' add -A
+                    git -C '${gitOpsWorktree}' commit -m "${commitMsg}"
                 """
 
                 pushWithRetry(gitOpsWorktree, targetBranch)
@@ -163,6 +183,90 @@ EOF
             sh "rm -rf '${gitOpsWorktree}'"
         }
     }
+}
+
+/**
+ * Sync infra/k8s files from the source workspace to the GitOps worktree.
+ *
+ * Strategy:
+ *   1. Save existing image tag/digest from every values file on the GitOps branch.
+ *   2. Copy the full infra/k8s directory from the workspace (charts, infra-deps, values).
+ *   3. Restore the saved tag/digest so existing deployments keep their current image refs.
+ *
+ * When images are ALSO built in the same run, the caller will overwrite the
+ * tag/digest for those specific services afterwards — which is correct.
+ */
+def syncInfraFiles(cfg, gitOpsWorktree) {
+    echo '>>> Syncing infra/k8s files to GitOps branch...'
+
+    def valuesDir = "${gitOpsWorktree}/${cfg.helmValuesDir}"
+
+    // ── Save current image refs from GitOps branch before overwriting ──
+    def allServiceKeys = cfg.services.collect { it } + [cfg.webAppName]
+    def savedRefs = [:]
+    allServiceKeys.each { service ->
+        def fileName = valuesFileForService(cfg, service)
+        def valuesFile = "${valuesDir}/${fileName}"
+        savedRefs[service] = readImageRefs(valuesFile)
+    }
+
+    echo ">>> Saved image refs from GitOps branch: ${savedRefs}"
+
+    // ── Copy infra/k8s from workspace to GitOps worktree ──
+    def srcDir = "${env.WORKSPACE}/infra/k8s"
+    def destDir = "${gitOpsWorktree}/infra/k8s"
+
+    sh """
+        set -eu
+        rm -rf '${destDir}'
+        cp -a '${srcDir}' '${destDir}'
+    """
+
+    echo '>>> infra/k8s files synced.'
+
+    // ── Restore saved image refs so we don't accidentally downgrade tags ──
+    savedRefs.each { service, refs ->
+        if (refs.tag || refs.digest) {
+            def fileName = valuesFileForService(cfg, service)
+            def valuesFile = "${valuesDir}/${fileName}"
+
+            if (sh(script: "test -f '${valuesFile}'", returnStatus: true) == 0) {
+                if (refs.tag) {
+                    sh "sed -i -E 's/^([[:space:]]*)tag:.*/\\1tag: \"${refs.tag}\"/' '${valuesFile}'"
+                }
+                if (refs.digest) {
+                    sh "sed -i -E 's/^([[:space:]]*)digest:.*/\\1digest: \"${refs.digest}\"/' '${valuesFile}'"
+                }
+                echo ">>> Restored image refs for ${service}: tag=${refs.tag}, digest=${refs.digest}"
+            }
+        }
+    }
+}
+
+/**
+ * Read the current image tag and digest from a Helm values file.
+ * Returns a map [tag: '...', digest: '...'] (either may be empty).
+ */
+def readImageRefs(valuesFile) {
+    def tag = ''
+    def digest = ''
+
+    def exists = sh(script: "test -f '${valuesFile}'", returnStatus: true)
+    if (exists != 0) {
+        return [tag: tag, digest: digest]
+    }
+
+    tag = sh(
+        script: "grep -E '^[[:space:]]*tag:' '${valuesFile}' | head -1 | sed -E 's/^[[:space:]]*tag:[[:space:]]*//' | tr -d '\"' || true",
+        returnStdout: true
+    ).trim()
+
+    digest = sh(
+        script: "grep -E '^[[:space:]]*digest:' '${valuesFile}' | head -1 | sed -E 's/^[[:space:]]*digest:[[:space:]]*//' | tr -d '\"' || true",
+        returnStdout: true
+    ).trim()
+
+    return [tag: tag, digest: digest]
 }
 
 def pushWithRetry(gitOpsWorktree, targetBranch) {
