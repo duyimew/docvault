@@ -3,7 +3,7 @@ namespace: docvault
 
 image:
   repository: daithang59/metadata-service
-  tag: "v35"
+  tag: "v37"
   digest: "sha256:c0b17a14f136a21a62483ccbaf9c22c1cb1966884444a74897327c5764d49f3b"
 
 healthPath: /health
