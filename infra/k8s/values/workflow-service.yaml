@@ -3,7 +3,7 @@ namespace: docvault
 
 image:
   repository: daithang59/workflow-service
-  tag: "v34"
+  tag: "v35"
   digest: "sha256:e54ad10f7a66aa15e49ff21dce979d4906bf0c6891a8d3ec022ac01b993cc1ed"
 
 healthPath: /health
