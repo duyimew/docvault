@@ -9,6 +9,12 @@ const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? 'docvault-gateway';
 const CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'dev-gateway-secret';
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3006';
 
+/** Only set Secure flag when actually serving over HTTPS */
+function isSecure(req: NextRequest): boolean {
+  return req.nextUrl.protocol === 'https:' ||
+    req.headers.get('x-forwarded-proto') === 'https';
+}
+
 interface JwtPayload {
   sub: string;
   preferred_username?: string;
@@ -74,7 +80,7 @@ export async function GET(req: NextRequest) {
 
     response.cookies.set('dv_access_token', access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure(req),
       sameSite: 'lax',
       maxAge: expires_in ?? 3600,
       path: '/',
@@ -83,7 +89,7 @@ export async function GET(req: NextRequest) {
     if (refresh_token) {
       response.cookies.set('dv_refresh_token', refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isSecure(req),
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',
@@ -92,7 +98,7 @@ export async function GET(req: NextRequest) {
 
     response.cookies.set('dv_user', JSON.stringify(user), {
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure(req),
       sameSite: 'lax',
       maxAge: 10,
       path: '/',
