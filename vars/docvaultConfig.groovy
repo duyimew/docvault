@@ -1,6 +1,6 @@
 def call() {
     def gitOpsBranch = env.GITOPS_BRANCH?.trim() ? env.GITOPS_BRANCH.trim() : 'gitops-testing'
-    def sonarHostUrl = env.SONAR_HOST_URL?.trim() ? env.SONAR_HOST_URL.trim() : 'http://host.docker.internal:9000'
+    def sonarHostUrl = env.SONAR_HOST_URL?.trim() ? env.SONAR_HOST_URL.trim() : 'http://sonarqube:9000'
     def zapTarget = env.ZAP_TARGET?.trim() ? env.ZAP_TARGET.trim() : ''
 
     return [
@@ -11,7 +11,7 @@ def call() {
         sonarQubeInstallation: 'sqdocvault',
         sonarProjectKey: 'docvault',
         sonarHostUrl: sonarHostUrl,
-        sonarHostCandidates: [sonarHostUrl, 'http://localhost:9000', 'http://127.0.0.1:9000', 'http://172.17.0.1:9000'],
+        sonarHostCandidates: [sonarHostUrl, 'http://host.docker.internal:9000', 'http://localhost:9000', 'http://127.0.0.1:9000', 'http://172.17.0.1:9000'],
         sonarDockerRunArgs: '--network host --add-host=host.docker.internal:host-gateway',
         checkovImage: 'bridgecrew/checkov:latest',
         terraformImage: 'hashicorp/terraform:1.8.5',
