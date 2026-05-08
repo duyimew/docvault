@@ -3,8 +3,8 @@ namespace: docvault
 
 image:
   repository: daithang59/document-service
-  tag: "v25"
-  digest: "sha256:e356b7e0c2c2dc95a8d3e19b1239ab7a09a1b9dfbae8881b5dac939231a9a00d"
+  tag: "v33"
+  digest: "sha256:629f1a89327f04197b4f01a0a10576e4cc495d99e59c1f12b4824dffed9044ee"
 
 healthPath: /health
 
@@ -14,7 +14,7 @@ service:
 env:
   NODE_ENV: production
   PORT: "3002"
-  KEYCLOAK_BASE_URL: "http://keycloak:18080"
+  KEYCLOAK_BASE_URL: "http://keycloak:8080"
   KEYCLOAK_REALM: "docvault"
   KEYCLOAK_AUDIENCE: "docvault-gateway"
   METADATA_SERVICE_URL: "http://docvault-metadata:3001"

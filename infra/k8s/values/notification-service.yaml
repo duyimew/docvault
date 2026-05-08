@@ -3,8 +3,8 @@ namespace: docvault
 
 image:
   repository: daithang59/notification-service
-  tag: "v25"
-  digest: "sha256:b37f72f38c760f91434327c2c41bbb477c6d4d854c0d10133f9cb837b7cc9fa5"
+  tag: "v33"
+  digest: "sha256:5b82c2a9d3c30220b85396791b9b2554c4d4297f65df546066f6f1ef814ca926"
 
 healthPath: /health
 
@@ -14,7 +14,7 @@ service:
 env:
   NODE_ENV: production
   PORT: "3005"
-  KEYCLOAK_BASE_URL: "http://keycloak:18080"
+  KEYCLOAK_BASE_URL: "http://keycloak:8080"
   KEYCLOAK_REALM: "docvault"
   KEYCLOAK_AUDIENCE: "docvault-gateway"
   AUDIT_SERVICE_URL: "http://docvault-audit-service:3004"
