@@ -8,6 +8,10 @@
   - Codebase status snapshot based on current runtime
 - `demo-flow.md`
   - Step-by-step EKS demo scenario, including ZAP, Grafana metrics and Loki logs, plus local fallback
+- `pipeline-hardening-summary.md`
+  - Vietnamese summary of the finalized Jenkins pipeline hardening, including build #61, Argo CD health checks, smoke test, ZAP, Trivy and observability
+- `setup_jenkins_k8s_account.md`
+  - Read-only Kubernetes ServiceAccount and kubeconfig setup for Jenkins Argo CD health checks
 - `security-sca-triage.md`
   - SCA fixes, remaining exceptions and evidence checklist for Dependency Check
 - `demo-users.md`

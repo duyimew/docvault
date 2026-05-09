@@ -1,9 +1,10 @@
 def call(cfg) {
     if (!cfg.zapTarget?.trim()) {
-        error('ZAP target is empty. Set the ZAP_TARGET parameter only after Gateway is reachable from the Jenkins/ZAP container.')
+        error('ZAP target is empty. Set ZAP_TARGET or DEPLOY_TARGET_URL only after the web app is reachable from the Jenkins/ZAP container.')
     }
 
     echo '>>> Running DAST Scan against deployed web target...'
+    echo '>>> Security gate policy: ZAP warnings are archived and reviewed for the MVP demo; High/Critical findings require a fix or written exception.'
     sh 'mkdir -p zap-report'
 
     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
@@ -38,6 +39,17 @@ def call(cfg) {
 
     if (!fileExists('zap-report/zap_report.html') || !fileExists('zap-report/zap_report.json')) {
         error('ZAP did not produce zap_report.html and zap_report.json. Check the DAST stage log.')
+    }
+
+    def hasBlockingZapFinding = sh(
+        script: '''
+            grep -Eq '"riskcode"[[:space:]]*:[[:space:]]*"?[34]"?' zap-report/zap_report.json
+        ''',
+        returnStatus: true
+    ) == 0
+
+    if (hasBlockingZapFinding) {
+        error('ZAP report contains High/Critical findings. Fix the issue or create a written exception before demo sign-off.')
     }
 
     echo '>>> ZAP reports generated under zap-report/. Review High/Critical findings before demo sign-off.'
