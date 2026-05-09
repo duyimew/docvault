@@ -166,7 +166,7 @@ Thiết lập pipeline Jenkins tự động từ commit code đến build, scan,
 - workflow-service
 - web
 
-**Trạng thái hiện tại:** Đã hoàn thành phần lớn pipeline DevSecOps lõi. Pipeline đã chạy qua các bước pre-build security, unit test, build/scan service và push/GitOps. Pipeline hiện có thêm `Argo CD Health Check` để đợi app `Synced/Healthy` nếu Jenkins có `kubectl`, và `Post-deploy Smoke Test` để kiểm tra `GET /` cùng `GET /api/health` trên EKS.
+**Trạng thái hiện tại:** Đã hoàn thành pipeline DevSecOps lõi và các bước xác minh sau deploy. Jenkins build `#61` trên branch `devsecops-pipeline` đã xanh toàn bộ: pre-build security, unit test, build/scan service, push/GitOps, `Argo CD Health Check`, `Post-deploy Smoke Test` và `DAST - OWASP ZAP`.
 
 ---
 
@@ -184,7 +184,7 @@ Sử dụng ArgoCD để đồng bộ trạng thái ứng dụng từ Git xuốn
 - Ứng dụng trên cluster đạt trạng thái Synced/Healthy.
 - Có thể rollback bằng cách quay lại phiên bản manifest trước đó.
 
-**Trạng thái hiện tại:** ArgoCD đã hoạt động tốt. Phần GitOps/CD đã đạt yêu cầu cơ bản. Jenkins đã có stage tùy chọn `Argo CD Health Check` dùng `kubectl get application` để đợi các app đạt `Synced/Healthy`. Nếu Jenkins agent chưa có kubeconfig thì giữ `RUN_ARGO_HEALTH_CHECK=false` và lưu bằng chứng thủ công bằng ảnh Argo CD.
+**Trạng thái hiện tại:** ArgoCD đã hoạt động tốt. Jenkins đã có ServiceAccount riêng `jenkins-argocd-reader` với quyền đọc Argo CD Application trong namespace `argocd`. Stage `Argo CD Health Check` đã pass trong pipeline `#61`, dùng credential `jenkins-argocd-kubeconfig` để đợi các app service chính đạt `Synced/Healthy`.
 
 ---
 
@@ -203,7 +203,7 @@ Bổ sung kiểm thử bảo mật động sau khi ứng dụng được triển
 - Lưu report vào Jenkins Artifacts.
 - Đặt rule pass/fail phù hợp.
 
-**Trạng thái hiện tại:** Đã có implementation trong Jenkins. `Jenkinsfile` có parameter `DEPLOY_TARGET_URL`, `RUN_ZAP` và `ZAP_TARGET`; `vars/dastZap.groovy` kiểm tra target reachable, chạy OWASP ZAP baseline scan, xuất `zap_report.html`, `zap_report.json` và dùng policy `-I` để warning không chặn MVP demo; `vars/postCleanup.groovy` đã archive `zap-report/*.html` và `zap-report/*.json`. Baseline scan nên trỏ vào web base URL `http://<node-ip>:30006` thay vì `/api` để spider nhận HTTP 200 ở target gốc.
+**Trạng thái hiện tại:** DAST đã chạy thành công trong Jenkins build `#61`. `Jenkinsfile` có parameter `DEPLOY_TARGET_URL`, `RUN_ZAP` và `ZAP_TARGET`; `vars/dastZap.groovy` kiểm tra target reachable, chạy OWASP ZAP baseline scan, xuất `zap_report.html`, `zap_report.json` và dùng policy `-I` để warning không chặn MVP demo. Pipeline vẫn fail nếu report không sinh ra hoặc có High/Critical risk code trong `zap_report.json`. Baseline scan trỏ vào web base URL `http://<node-ip>:30006` thay vì `/api`.
 
 **Mức ưu tiên:** Cao. Đây là phần còn thiếu rõ ràng trong pipeline DevSecOps.
 
@@ -283,7 +283,7 @@ Các phần còn lại tập trung vào hoàn thiện security validation sau de
 | Phân tích đề tài | Đã làm | Đã có đề cương và phạm vi rõ ràng |
 | Thiết kế kiến trúc microservices | Đã làm nền tảng | Cần bổ sung sơ đồ/ảnh minh họa vào báo cáo |
 | Xây dựng các service chính | Đang hoàn thiện | Các service đã xuất hiện trong pipeline build/scan |
-| Jenkins pipeline | Đã làm phần lõi | Pipeline chạy được qua nhiều stage chính |
+| Jenkins pipeline | Đã hoàn thiện | Build `#61` đã xanh toàn bộ pipeline |
 | Checkov Scan | Đã tích hợp | Đã nằm trong Pre-build Security |
 | Terraform Validate | Đã tích hợp | Đã nằm trong Pre-build Security |
 | SonarQube SAST | Đã tích hợp | Đã nằm trong Pre-build Security |
@@ -292,9 +292,9 @@ Các phần còn lại tập trung vào hoàn thiện security validation sau de
 | Unit Tests | Đã tích hợp | Cần lưu bằng chứng coverage nếu có |
 | Build services | Đã làm | Build document, gateway, metadata, audit, notification, workflow, web |
 | Push & GitOps | Đã làm | Pipeline có bước cập nhật GitOps |
-| ArgoCD | Đã hoạt động tốt | Có stage tùy chọn đợi Synced/Healthy nếu Jenkins có kubectl |
-| Post-deploy smoke test | Đã tích hợp | Kiểm tra web root và `/api/health` trên EKS |
-| DAST OWASP ZAP | Đã có code và policy, cần chạy thật | Jenkins/ZAP kiểm tra reachability, sinh/archive report và không fail demo với warning |
+| ArgoCD | Đã hoạt động tốt | Stage `Argo CD Health Check` đã pass bằng ServiceAccount riêng cho Jenkins |
+| Post-deploy smoke test | Đã tích hợp và đã pass | Kiểm tra web root và `/api/health` trên EKS |
+| DAST OWASP ZAP | Đã chạy thật và đã pass | Jenkins/ZAP kiểm tra reachability, sinh/archive report và không fail demo với warning |
 | Observability | Đã triển khai Prometheus/Grafana/Loki | `monitoring-stack` và `loki-stack` auto-sync/self-heal, Synced/Healthy, cần chụp dashboard/log |
 | Demo E2E nghiệp vụ | Đã test thủ công trên EKS | Login Keycloak, upload, preview, download đã pass; cần lưu bằng chứng |
 | Báo cáo và slide | Chưa hoàn thiện | Làm sau khi có thêm bằng chứng pipeline, ArgoCD, observability |
@@ -485,15 +485,15 @@ Cần thu thập và lưu lại các bằng chứng:
 - [x] Có build nhiều service.
 - [x] Có Push & GitOps.
 - [x] Có DAST OWASP ZAP code/policy trong Jenkins shared library.
-- [ ] Có DAST OWASP ZAP chạy thật với `RUN_ZAP=true`.
+- [x] Có DAST OWASP ZAP chạy thật với `RUN_ZAP=true`.
 - [x] Có cấu hình lưu ZAP report artifact trong Jenkins.
-- [ ] Có artifact `zap_report.html` và `zap_report.json` từ lần chạy thật.
+- [x] Có artifact `zap_report.html` và `zap_report.json` từ lần chạy thật.
 
 ### GitOps / Kubernetes
 
 - [x] ArgoCD hoạt động tốt.
-- [ ] Có screenshot ArgoCD Synced/Healthy.
-- [ ] Có bằng chứng pod/service/ingress chạy ổn định.
+- [x] Có bằng chứng ArgoCD service apps Synced/Healthy qua stage `Argo CD Health Check`.
+- [x] Có bằng chứng pod/service chạy ổn định qua pipeline và kiểm tra EKS.
 - [ ] Có demo rollback hoặc mô tả rollback GitOps.
 
 ### Observability
@@ -529,7 +529,7 @@ Cần thu thập và lưu lại các bằng chứng:
 
 ## 10. Câu mô tả tiến độ có thể đưa vào báo cáo
 
-Hiện tại, nhóm đã hoàn thành phần CI/CD DevSecOps lõi và GitOps deployment với Jenkins và ArgoCD. Pipeline đã tích hợp các bước kiểm tra IaC, SAST, SCA, Trivy, unit test, build nhiều microservices và cập nhật GitOps manifest. Ứng dụng đã chạy được trên EKS qua NodePort và đã test thủ công thành công các luồng Keycloak login, upload, preview và download. DAST OWASP ZAP đã có khung Jenkins sinh artifact, observability đã triển khai kube-prometheus-stack qua Argo CD và SCA đã có bản ghi triage/exception. Các phần còn lại là chạy ZAP thật trên target EKS, chụp Grafana dashboard/log và chuẩn hóa toàn bộ bằng chứng báo cáo.
+Hiện tại, nhóm đã hoàn thành phần CI/CD DevSecOps lõi và GitOps deployment với Jenkins và ArgoCD. Pipeline build `#61` đã xanh toàn bộ, bao gồm IaC, SAST, SCA, Trivy, unit test, build/scan service, push/GitOps, Argo CD health check, post-deploy smoke test và DAST OWASP ZAP. Ứng dụng đã chạy được trên EKS qua NodePort và đã test thủ công thành công các luồng Keycloak login, upload, preview và download. Observability đã triển khai kube-prometheus-stack và Loki/promtail qua Argo CD. Việc còn lại chủ yếu là chụp Grafana dashboard/log và chuẩn hóa toàn bộ bằng chứng báo cáo.
 
 ---
 
@@ -540,7 +540,7 @@ Tính đến thời điểm hiện tại, đồ án đã đạt được phần 
 Các công việc nên ưu tiên tiếp theo là:
 
 1. Theo dõi và hoàn tất PR vào `main`.
-2. Chạy DAST OWASP ZAP thật trên target EKS để có report artifact.
-3. Apply monitoring stack và chụp Grafana dashboard.
+2. Mở Grafana và chụp dashboard metrics/log.
+3. Chụp đầy đủ bằng chứng EKS E2E.
 4. Đối chiếu Dependency Check artifact với `docs/security-sca-triage.md`.
-5. Chuẩn hóa demo end-to-end và thu thập bằng chứng cho báo cáo.
+5. Đưa screenshot/report vào slide và phụ lục báo cáo.

@@ -115,11 +115,14 @@ Run the Jenkins pipeline after the app is reachable on EKS:
 RUN_ZAP=true
 DEPLOY_TARGET_URL=http://<node-external-ip>:30006
 ZAP_TARGET=http://<node-external-ip>:30006
+RUN_ARGO_HEALTH_CHECK=true
+KUBECONFIG_CREDENTIAL_ID=jenkins-argocd-kubeconfig
 GITOPS_BRANCH=gitops-testing
 ```
 
 Expected result:
 
+- `Argo CD Health Check` passes for the service applications.
 - `Post-deploy Smoke Test` passes for `GET /` and `GET /api/health`.
 - `DAST - OWASP ZAP` stage runs.
 - Jenkins archives `zap-report/zap_report.html`.

@@ -1,8 +1,28 @@
 # Tóm Tắt Cải Tiến Pipeline DocVault
 
-Cập nhật: 2026-05-09
+Cập nhật: 2026-05-10
 
 Tài liệu này tóm tắt các cải tiến mới đã thực hiện cho Jenkins pipeline, GitOps deployment, DAST và observability sau khi MVP DocVault đã chạy ổn định trên EKS.
+
+## Trạng Thái Xác Minh Mới Nhất
+
+Pipeline Jenkins đã chạy xanh toàn bộ ở build `#61` trên branch `devsecops-pipeline`.
+
+Các stage đã pass:
+
+- `Pre-build Security`: Checkov, Terraform validate, SonarQube, Dependency Check, Trivy FS, Unit Tests.
+- `Build & Scan Services`: build/scan các service chính theo batch.
+- `Push & GitOps`: push image và cập nhật branch `gitops-testing`.
+- `Argo CD Health Check`: pass với kubeconfig read-only của ServiceAccount `jenkins-argocd-reader`.
+- `Post-deploy Smoke Test`: pass với `GET /` và `GET /api/health`.
+- `DAST - OWASP ZAP`: pass và archive report.
+
+Jenkins container hiện dùng image `myjenkins-blueocean:lts-jdk21`, đã có:
+
+```text
+kubectl v1.35.0
+docker buildx v0.33.0
+```
 
 ## 1. Tối Ưu Pipeline Chạy Song Song
 
@@ -209,6 +229,7 @@ vars/argocdHealthCheck.groovy
 
 - Jenkins agent có `kubectl`.
 - Jenkins agent có kubeconfig/RBAC cho phép đọc Argo CD `Application` trong namespace `argocd`.
+- Jenkins credential dạng Secret file có ID `jenkins-argocd-kubeconfig`.
 
 Nếu Jenkins chưa có quyền truy cập cluster, giữ:
 
@@ -266,6 +287,31 @@ Policy hiện tại:
 ```text
 --severity HIGH,CRITICAL --exit-code 1
 ```
+
+Trivy FS chạy trên một bản copy tạm của workspace, trong đó các thư mục generated/cache được loại bỏ trước khi scan:
+
+```text
+.git
+node_modules
+.pnpm-store
+.turbo
+.next
+dist
+coverage
+dependency-check-report
+checkov-report
+zap-report
+*/.terraform
+*/.terraform/*
+```
+
+Trivy FS cũng giới hạn misconfiguration scanner vào Dockerfile, Kubernetes và Helm:
+
+```text
+--misconfig-scanners dockerfile,kubernetes,helm
+```
+
+Lý do: Terraform đã có stage riêng là `Terraform Validate` và `IaC - Checkov Scan`. Không để Trivy FS quét thư mục `.terraform/modules` vì đây là downloaded module/vendor output sau `terraform init`, dễ tạo finding trùng hoặc không thuộc code nguồn trực tiếp của nhóm.
 
 Implementation:
 
@@ -340,6 +386,7 @@ DEPLOY_TARGET_URL=http://52.221.234.153:30006
 RUN_ARGO_HEALTH_CHECK=true
 ARGOCD_NAMESPACE=argocd
 ARGOCD_TIMEOUT_SECONDS=300
+KUBECONFIG_CREDENTIAL_ID=jenkins-argocd-kubeconfig
 RUN_ZAP=true
 ZAP_TARGET=http://52.221.234.153:30006
 ```

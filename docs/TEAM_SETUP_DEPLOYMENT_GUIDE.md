@@ -75,13 +75,20 @@ docker network create jenkins
 
 Nếu network đã tồn tại, Docker sẽ báo lỗi trùng tên; có thể bỏ qua.
 
-### 4.2. Build Jenkins image có Docker CLI
+### 4.2. Build Jenkins image có Docker CLI, Buildx và kubectl
 
 Repo có `Dockerfile.jenkins` dựa trên `jenkins/jenkins:lts-jdk21` và cài Docker
-CLI.
+CLI, Docker Buildx và `kubectl` để Jenkins có thể build image bằng BuildKit
+và tự kiểm tra Argo CD health.
 
 ```powershell
 docker build -t docvault-jenkins:lts-jdk21 -f Dockerfile.jenkins .
+```
+
+Nếu dùng container local hiện tại của nhóm, image tag đang dùng là:
+
+```powershell
+docker build -t myjenkins-blueocean:lts-jdk21 -f Dockerfile.jenkins .
 ```
 
 ### 4.3. Start Docker-in-Docker daemon
@@ -181,7 +188,7 @@ Post-deploy verification hiện tại:
 
 - `vars/argocdHealthCheck.groovy` dùng `kubectl get application` để đợi các Argo CD app đạt `Synced/Healthy`.
 - `vars/postDeploySmokeTest.groovy` gọi `GET http://<node-external-ip>:30006` và `GET http://<node-external-ip>:30006/api/health`, retry tối đa khoảng 5 phút.
-- Nếu Jenkins chưa có kubeconfig, giữ `RUN_ARGO_HEALTH_CHECK=false` và xác minh Argo CD thủ công.
+- Jenkins hiện đã có kubeconfig read-only qua credential `jenkins-argocd-kubeconfig`; nếu credential bị thiếu hoặc Jenkins image chưa có `kubectl`, giữ `RUN_ARGO_HEALTH_CHECK=false` và xác minh Argo CD thủ công.
 
 DAST policy hiện tại:
 
@@ -420,6 +427,7 @@ DEPLOY_TARGET_URL=http://<node-external-ip>:30006
 RUN_ARGO_HEALTH_CHECK=true
 ARGOCD_NAMESPACE=argocd
 ARGOCD_TIMEOUT_SECONDS=300
+KUBECONFIG_CREDENTIAL_ID=jenkins-argocd-kubeconfig
 ```
 
 Smoke test tự động kiểm tra:
@@ -436,7 +444,7 @@ sync=Synced
 health=Healthy
 ```
 
-Nếu Jenkins agent chưa có kubeconfig hoặc chưa được cấp quyền đọc Application trong namespace `argocd`, giữ `RUN_ARGO_HEALTH_CHECK=false`, chạy pipeline để push GitOps/smoke/ZAP, rồi xác minh Argo CD thủ công bằng:
+Trạng thái hiện tại đã có ServiceAccount `jenkins-argocd-reader` và Jenkins credential `jenkins-argocd-kubeconfig`, nên build `#61` đã pass stage này. Nếu credential bị thiếu hoặc cluster access lỗi, tạm giữ `RUN_ARGO_HEALTH_CHECK=false`, chạy pipeline để push GitOps/smoke/ZAP, rồi xác minh Argo CD thủ công bằng:
 
 ```powershell
 kubectl get applications -n argocd
@@ -568,7 +576,7 @@ pnpm build
 
 Kiểm tra pipeline:
 
-- Jenkins build xanh.
+- Jenkins build xanh. Build `#61` trên branch `devsecops-pipeline` đã pass toàn bộ pipeline với Argo CD health check, smoke test và ZAP.
 - SonarQube scan chạy thành công hoặc quality gate được xử lý theo rule của team.
 - Docker image đã push lên registry.
 - Branch `gitops-testing` đã được Jenkins cập nhật image tag/digest.
@@ -659,6 +667,60 @@ http://<node-external-ip>:30006
 ```
 
 Web app vẫn dùng `/api/...` để gọi gateway như bình thường.
+
+### Docker build báo thiếu Buildx
+
+Nếu stage `Build & Scan Services` báo:
+
+```text
+BuildKit is enabled but the buildx component is missing or broken
+```
+
+nghĩa là Jenkins container có Docker CLI nhưng thiếu `docker-buildx-plugin`.
+Rebuild Jenkins image từ `Dockerfile.jenkins` mới nhất và recreate container:
+
+```powershell
+docker build -t myjenkins-blueocean:lts-jdk21 -f Dockerfile.jenkins .
+docker stop jenkins-blueocean
+docker rm jenkins-blueocean
+```
+
+Sau đó chạy lại container Jenkins với volume `jenkins-data` cũ.
+
+Kiểm tra:
+
+```powershell
+docker exec jenkins-blueocean sh -lc "docker buildx version"
+```
+
+### Argo CD Health Check báo thiếu `kubectl`
+
+Nếu stage báo:
+
+```text
+kubectl is not available on the Jenkins agent
+```
+
+rebuild Jenkins image từ `Dockerfile.jenkins` mới nhất và kiểm tra:
+
+```powershell
+docker exec jenkins-blueocean sh -lc "kubectl version --client=true"
+```
+
+### Argo CD Health Check không tìm thấy credential
+
+Nếu stage báo:
+
+```text
+Could not find credentials entry with ID 'jenkins-argocd-kubeconfig'
+```
+
+tạo Jenkins credential dạng Secret file, upload `jenkins-argocd-reader.kubeconfig`,
+và đặt ID đúng là:
+
+```text
+jenkins-argocd-kubeconfig
+```
 
 ### Grafana chỉ thấy Loki, không thấy Prometheus
 
