@@ -3,8 +3,8 @@ namespace: docvault
 
 image:
   repository: daithang59/notification-service
-  tag: "v44"
-  digest: "sha256:a418f47d69de2b83e8c0fcd79d1b33de70912ed258fffd4c9c7fab29587829e8"
+  tag: "v46"
+  digest: "sha256:46ac5e3e5b9148e9c3757c9caaceb28ebcc3cffa9e9cfca228b11b9a73582e2b"
 
 healthPath: /health
 
@@ -15,6 +15,9 @@ env:
   NODE_ENV: production
   PORT: "3005"
   KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  # Patched at runtime by scripts/setup-eks-access.ps1 to the public
+  # Keycloak NodePort issuer while JWKS stays on KEYCLOAK_BASE_URL.
+  KEYCLOAK_ISSUER: "http://keycloak:8080/realms/docvault"
   KEYCLOAK_REALM: "docvault"
   KEYCLOAK_AUDIENCE: "docvault-gateway"
   AUDIT_SERVICE_URL: "http://docvault-audit-service:3004"

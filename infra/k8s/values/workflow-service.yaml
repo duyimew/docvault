@@ -3,8 +3,8 @@ namespace: docvault
 
 image:
   repository: daithang59/workflow-service
-  tag: "v44"
-  digest: "sha256:e96f0f7cd5e521bddbf3bf53abf8021216797b78c7c56a5810ba33fea16be672"
+  tag: "v46"
+  digest: "sha256:d6be813c6c867a28c6a063b60971b381505ca5acb17ab8e464f0839b87c81e53"
 
 healthPath: /health
 
@@ -15,6 +15,9 @@ env:
   NODE_ENV: production
   PORT: "3003"
   KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  # Patched at runtime by scripts/setup-eks-access.ps1 to the public
+  # Keycloak NodePort issuer while JWKS stays on KEYCLOAK_BASE_URL.
+  KEYCLOAK_ISSUER: "http://keycloak:8080/realms/docvault"
   KEYCLOAK_REALM: "docvault"
   KEYCLOAK_AUDIENCE: "docvault-gateway"
   METADATA_SERVICE_URL: "http://docvault-metadata:3001"
