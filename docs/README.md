@@ -7,7 +7,9 @@
 - `PROJECT_STATUS.md`
   - Codebase status snapshot based on current runtime
 - `demo-flow.md`
-  - Step-by-step manual demo scenario after stack is running
+  - Step-by-step EKS demo scenario, plus local fallback
+- `security-sca-triage.md`
+  - SCA fixes, remaining exceptions and evidence checklist for Dependency Check
 - `demo-users.md`
   - Seed users, role mapping and login instructions
 - `REFRACTOR_SUMMARY.md`
