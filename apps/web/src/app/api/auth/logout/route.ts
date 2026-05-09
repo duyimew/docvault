@@ -6,7 +6,6 @@ const KC_BROWSER_BASE =
   'http://localhost:8080';
 const KC_REALM = process.env.KEYCLOAK_REALM ?? 'docvault';
 const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? 'docvault-gateway';
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3006';
 
 /**
  * GET /api/auth/logout
@@ -16,7 +15,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3006';
  */
 export async function GET(req: NextRequest) {
   const idToken = req.cookies.get('dv_id_token')?.value;
-  const postLogoutRedirectUri = `${FRONTEND_URL}/login?logged_out=1`;
+  const postLogoutRedirectUri = `${req.nextUrl.origin}/login?logged_out=1`;
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     post_logout_redirect_uri: postLogoutRedirectUri,

@@ -26,9 +26,9 @@ Sau khi scale node tu 0 len (hoac lan dau deploy), chay:
 ```
 
 Script tu dong:
-1. Detect node external IP moi
+1. Detect cac node external IP moi
 2. Patch `FRONTEND_URL`, `KEYCLOAK_BROWSER_BASE_URL`, `ALLOWED_ORIGINS`
-3. Update Keycloak redirect URIs
+3. Update Keycloak redirect URIs cho tat ca web NodePort URLs
 
 **Khong can commit, khong can pipeline, khong rebuild image.**
 
@@ -37,10 +37,14 @@ Script tu dong:
 Sau khi script chay xong, se in ra URL:
 
 ```text
-http://<node-ip>:30006          → Web App
-http://<node-ip>:30006/api      → Gateway API (proxied)
-http://<node-ip>:30080          → Keycloak
+http://<node-ip>:30006          -> Web App
+http://<node-ip>:30006/api      -> Gateway API (proxied)
+http://<node-ip>:30080          -> Keycloak
 ```
+
+Neu cluster co nhieu node, script se in `All Web URLs`. Co the mo web
+bang bat ky URL nao trong danh sach do, mien la image web da co auth routes
+dung request origin cho callback.
 
 ## 3. Dang nhap demo
 

@@ -7,7 +7,6 @@ const KC_BASE =
 const KC_REALM = process.env.KEYCLOAK_REALM ?? 'docvault';
 const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? 'docvault-gateway';
 const CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'dev-gateway-secret';
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3006';
 
 /** Only set Secure flag when actually serving over HTTPS */
 function isSecure(req: NextRequest): boolean {
@@ -28,19 +27,21 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const error = searchParams.get('error');
+  const frontendUrl = req.nextUrl.origin;
+  const callbackUrl = `${frontendUrl}/api/auth/callback`;
 
   if (error) {
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(error)}`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error)}`);
   }
 
   // Validate state (CSRF protection)
   const savedState = req.cookies.get('kc_state')?.value;
   if (!savedState || savedState !== state) {
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=invalid_state`);
   }
 
   if (!code) {
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=no_code`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=no_code`);
   }
 
   try {
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
           client_id: CLIENT_ID,
           client_secret: CLIENT_SECRET,
           code,
-          redirect_uri: `${FRONTEND_URL}/api/auth/callback`,
+          redirect_uri: callbackUrl,
         }),
       },
     );
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
       roles: payload.realm_access?.roles ?? [],
     };
 
-    const response = NextResponse.redirect(`${FRONTEND_URL}/login?auth=ok`);
+    const response = NextResponse.redirect(`${frontendUrl}/login?auth=ok`);
 
     response.cookies.delete('kc_state');
 
@@ -117,6 +118,6 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (err) {
     console.error('Keycloak token exchange failed:', err);
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=token_exchange_failed`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=token_exchange_failed`);
   }
 }
