@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getRequestOrigin } from '../request-origin';
 
 const KC_BROWSER_BASE =
   process.env.KEYCLOAK_BROWSER_BASE_URL ??
@@ -15,7 +16,7 @@ const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? 'docvault-gateway';
  */
 export async function GET(req: NextRequest) {
   const idToken = req.cookies.get('dv_id_token')?.value;
-  const postLogoutRedirectUri = `${req.nextUrl.origin}/login?logged_out=1`;
+  const postLogoutRedirectUri = `${getRequestOrigin(req)}/login?logged_out=1`;
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     post_logout_redirect_uri: postLogoutRedirectUri,

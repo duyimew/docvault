@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getRequestOrigin } from '../request-origin';
 
 const KC_BASE =
   process.env.KEYCLOAK_INTERNAL_BASE_URL ??
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const error = searchParams.get('error');
-  const frontendUrl = req.nextUrl.origin;
+  const frontendUrl = getRequestOrigin(req);
   const callbackUrl = `${frontendUrl}/api/auth/callback`;
 
   if (error) {
