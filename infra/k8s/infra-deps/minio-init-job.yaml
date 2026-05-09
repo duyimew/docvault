@@ -10,11 +10,24 @@ spec:
   backoffLimit: 5
   template:
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       restartPolicy: OnFailure
       initContainers:
         # Wait for MinIO to be reachable before running mc commands
         - name: wait-for-minio
           image: busybox:1.36
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           command:
             - sh
             - -c
@@ -32,6 +45,12 @@ spec:
       containers:
         - name: mc
           image: minio/mc:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           command:
             - sh
             - -c
@@ -48,7 +67,15 @@ spec:
               value: "minioadminpw"
             - name: MINIO_BUCKET
               value: "docvault"
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             limits:
               cpu: 100m
               memory: 64Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}

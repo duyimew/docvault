@@ -5,6 +5,6 @@ def call(cfg) {
         docker run --rm \\
             -v ${env.WORKSPACE}:/src \\
             ${cfg.trivyImage} \\
-            fs /src --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --exit-code 1 --no-progress --skip-dirs .pnpm-store,node_modules
+            fs /src --scanners vuln,secret,misconfig --misconfig-scanners dockerfile,kubernetes,helm --severity HIGH,CRITICAL --exit-code 1 --no-progress --skip-dirs .pnpm-store,node_modules,.terraform
     """
 }
