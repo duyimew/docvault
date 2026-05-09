@@ -21,6 +21,31 @@ pipeline {
             defaultValue: 'gitops-testing',
             description: 'GitOps branch used for Helm values tag updates (create this branch before enabling updates).'
         )
+        string(
+            name: 'DEPLOY_TARGET_URL',
+            defaultValue: '',
+            description: 'Reachable deployed web base URL for post-deploy smoke tests, for example http://<node-ip>:30006.'
+        )
+        booleanParam(
+            name: 'RUN_ARGO_HEALTH_CHECK',
+            defaultValue: false,
+            description: 'Check configured Argo CD Applications are Synced/Healthy after GitOps push. Requires kubectl access from Jenkins.'
+        )
+        string(
+            name: 'ARGOCD_NAMESPACE',
+            defaultValue: 'argocd',
+            description: 'Namespace where Argo CD Application resources are installed.'
+        )
+        string(
+            name: 'ARGOCD_APPS',
+            defaultValue: 'docvault-infra-deps docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web',
+            description: 'Space or comma separated Argo CD Application names to wait for Synced/Healthy.'
+        )
+        string(
+            name: 'ARGOCD_TIMEOUT_SECONDS',
+            defaultValue: '300',
+            description: 'Maximum seconds to wait for all configured Argo CD Applications to become Synced/Healthy.'
+        )
         booleanParam(
             name: 'RUN_ZAP',
             defaultValue: false,
@@ -57,12 +82,32 @@ pipeline {
                         ? params.GITOPS_BRANCH.trim()
                         : cfg.gitOpsBranch
 
+                    cfg.deployTargetUrl = params.DEPLOY_TARGET_URL?.trim()
+                        ? params.DEPLOY_TARGET_URL.trim()
+                        : cfg.deployTargetUrl
+
                     cfg.zapTarget = params.ZAP_TARGET?.trim()
                         ? params.ZAP_TARGET.trim()
-                        : cfg.zapTarget
+                        : (cfg.zapTarget ?: cfg.deployTargetUrl)
+
+                    cfg.runArgoHealthCheck = params.RUN_ARGO_HEALTH_CHECK
+                    cfg.argocdNamespace = params.ARGOCD_NAMESPACE?.trim()
+                        ? params.ARGOCD_NAMESPACE.trim()
+                        : cfg.argocdNamespace
+                    cfg.argocdApps = params.ARGOCD_APPS?.trim()
+                        ? params.ARGOCD_APPS.trim().split(/[\s,]+/).findAll { it }
+                        : cfg.argocdApps
+                    cfg.argocdTimeoutSeconds = params.ARGOCD_TIMEOUT_SECONDS?.trim()
+                        ? params.ARGOCD_TIMEOUT_SECONDS.trim()
+                        : cfg.argocdTimeoutSeconds
 
                     echo ">>> Effective GitOps branch: ${cfg.gitOpsBranch}"
                     echo ">>> FORCE_BUILD_ALL=${params.FORCE_BUILD_ALL}"
+                    echo ">>> DEPLOY_TARGET_URL=${cfg.deployTargetUrl ?: '(not set)'}"
+                    echo ">>> RUN_ARGO_HEALTH_CHECK=${params.RUN_ARGO_HEALTH_CHECK}"
+                    echo ">>> ARGOCD_NAMESPACE=${cfg.argocdNamespace}"
+                    echo ">>> ARGOCD_APPS=${cfg.argocdApps.join(',')}"
+                    echo ">>> ARGOCD_TIMEOUT_SECONDS=${cfg.argocdTimeoutSeconds}"
                     echo ">>> RUN_ZAP=${params.RUN_ZAP}"
                     echo ">>> ZAP_TARGET=${cfg.zapTarget ?: '(not set)'}"
                 }
@@ -186,6 +231,32 @@ pipeline {
                 script {
                     echo ">>> Push & GitOps with builtServicesCsv='${builtServicesCsv}', INFRA_CHANGED='${env.INFRA_CHANGED}'"
                     pushAndGitOps(cfg, builtServicesCsv)
+                }
+            }
+        }
+
+        stage('Argo CD Health Check') {
+            when {
+                expression {
+                    return params.RUN_ARGO_HEALTH_CHECK
+                }
+            }
+            steps {
+                script {
+                    argocdHealthCheck(cfg)
+                }
+            }
+        }
+
+        stage('Post-deploy Smoke Test') {
+            when {
+                expression {
+                    return cfg.deployTargetUrl?.trim() ? true : false
+                }
+            }
+            steps {
+                script {
+                    postDeploySmokeTest(cfg)
                 }
             }
         }

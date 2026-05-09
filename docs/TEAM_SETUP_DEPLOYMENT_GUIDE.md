@@ -13,6 +13,8 @@ tiết hơn, đọc thêm:
 - `docs/docvault_terraform_eks_argocd_plan.md`: tạo EKS và bootstrap Argo CD.
 - `docs/docvault_eks_pause_resume_runbook.md`: tắt/mở node EKS để tiết kiệm chi phí.
 - `docs/PORT_FORWARD_TESTING.md`: truy cập EKS bằng NodePort sau khi node IP thay đổi.
+- `docs/demo-flow.md`: kịch bản demo EKS gồm app, Jenkins/ZAP, Grafana và Loki.
+- `docs/security-sca-triage.md`: bản ghi xử lý SCA, package đã fix và exception còn lại.
 
 ## 1. Repository và Branch Model
 
@@ -166,8 +168,33 @@ Pipeline parameters quan trọng:
 
 - `FORCE_BUILD_ALL=true`: rebuild toàn bộ image, phù hợp lần chạy đầu.
 - `GITOPS_BRANCH=gitops-testing`: branch Argo CD đang watch.
-- `RUN_ZAP=false`: nên để false cho đến khi gateway target trên EKS reachable.
-- `ZAP_TARGET=http://<gateway-url>/api`: chỉ cần khi bật ZAP.
+- `DEPLOY_TARGET_URL=http://<node-external-ip>:30006`: web base URL dùng cho smoke test sau deploy. Jenkins sẽ kiểm tra `GET /` và `GET /api/health`.
+- `RUN_ARGO_HEALTH_CHECK=true`: bật khi Jenkins agent đã có `kubectl` và kubeconfig truy cập được namespace `argocd`.
+- `ARGOCD_NAMESPACE=argocd`: namespace chứa Argo CD Application.
+- `ARGOCD_APPS=docvault-infra-deps docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web`: danh sách app cần đợi `Synced/Healthy`.
+- `ARGOCD_TIMEOUT_SECONDS=300`: thời gian tối đa chờ Argo CD sync/health.
+- `RUN_ZAP=false`: để false khi app chưa deploy hoặc NodePort chưa reachable.
+- `ZAP_TARGET=http://<node-external-ip>:30006`: web base URL dùng cho OWASP ZAP baseline scan khi bật ZAP. Nếu để trống, pipeline dùng `DEPLOY_TARGET_URL`. Không dùng `/api` làm target baseline vì `/api` root có thể trả 404; web app vẫn gọi API qua `/api/...` như bình thường.
+
+Post-deploy verification hiện tại:
+
+- `vars/argocdHealthCheck.groovy` dùng `kubectl get application` để đợi các Argo CD app đạt `Synced/Healthy`.
+- `vars/postDeploySmokeTest.groovy` gọi `GET http://<node-external-ip>:30006` và `GET http://<node-external-ip>:30006/api/health`, retry tối đa khoảng 5 phút.
+- Nếu Jenkins chưa có kubeconfig, giữ `RUN_ARGO_HEALTH_CHECK=false` và xác minh Argo CD thủ công.
+
+DAST policy hiện tại:
+
+- `vars/dastZap.groovy` kiểm tra `ZAP_TARGET` reachable trước khi chạy scan.
+- ZAP chạy bằng image `ghcr.io/zaproxy/zaproxy:stable`.
+- Report được xuất ra:
+  - `zap-report/zap_report.html`
+  - `zap-report/zap_report.json`
+- `vars/postCleanup.groovy` archive các report này làm Jenkins artifacts.
+- ZAP baseline chạy với `-I`, nghĩa là warning vẫn được ghi vào report nhưng không làm fail pipeline demo.
+- Sau khi report được sinh, pipeline đọc `zap_report.json`; nếu có riskcode High/Critical thì stage fail để buộc fix hoặc tạo exception.
+- Security gate policy:
+  - Critical/High: fail pipeline hoặc cần exception record rõ ràng.
+  - Medium/Low/ZAP warning: archive report, review, không chặn MVP demo.
 
 ## 5. Terraform AWS EKS
 
@@ -254,6 +281,8 @@ Apply GitOps applications:
 ```powershell
 kubectl apply -f infra\argocd-apps\docvault-infra.yaml
 kubectl apply -f infra\argocd-apps\docvault-apps.yaml
+kubectl apply -f infra\argocd-apps\monitoring.yaml
+kubectl apply -f infra\argocd-apps\loki.yaml
 ```
 
 Kiểm tra:
@@ -262,10 +291,27 @@ Kiểm tra:
 kubectl get applications -n argocd
 kubectl get pods -n docvault
 kubectl get svc -n docvault
+kubectl get pods -n monitoring
 ```
 
 Argo CD sẽ sync từ branch `gitops-testing`. Jenkins pipeline là nơi cập nhật
 image tag/digest trên branch này sau khi build thành công.
+
+Các app observability hiện tại:
+
+- `monitoring-stack`: cài `kube-prometheus-stack`, gồm Prometheus, Grafana, Alertmanager, kube-state-metrics và node-exporter.
+- `loki-stack`: cài Loki và promtail để thu log container từ các namespace, gồm `docvault`.
+
+Cả hai app đều bật Argo CD automated sync:
+
+- `prune: true`
+- `selfHeal: true`
+
+Grafana được cấu hình sẵn datasource:
+
+- `Prometheus`: datasource mặc định cho metrics.
+- `Alertmanager`: datasource cảnh báo.
+- `Loki`: datasource log, trỏ tới `http://loki-stack:3100`.
 
 ## 7. Truy Cập EKS Bằng NodePort
 
@@ -300,6 +346,8 @@ Port-forward hay dùng:
 kubectl port-forward -n argocd svc/argocd-server 18081:443
 kubectl port-forward -n docvault svc/keycloak 18090:8080
 kubectl port-forward -n docvault svc/minio 19001:9001
+kubectl port-forward -n monitoring svc/monitoring-stack-grafana 3000:80
+kubectl port-forward -n monitoring svc/loki-stack 3100:3100
 ```
 
 Nếu cluster có nhiều node, script in ra `All Web URLs`. Dùng bất kỳ URL nào
@@ -308,7 +356,170 @@ trong danh sách đó.
 Ghi chú: NodePort URL phụ thuộc external IP của node. Vì vậy sau mỗi lần resume
 cluster, nên chạy lại `setup-eks-access.ps1` trước khi test login/upload/preview.
 
-## 8. Pause/Resume EKS Để Tiết Kiệm Chi Phí
+## 8. Security Headers, DAST và Observability
+
+### 8.1. Web security headers
+
+Web app cấu hình security headers trong `apps/web/next.config.ts`:
+
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` khóa các browser capabilities không dùng như camera, microphone, geolocation, payment, USB.
+- `Cross-Origin-Opener-Policy: same-origin`
+- `Cross-Origin-Embedder-Policy: require-corp`
+- `Cross-Origin-Resource-Policy: same-origin`
+- `Content-Security-Policy` giới hạn resource về cùng origin, chặn object embed và frame ancestor.
+- `poweredByHeader: false` để bỏ `X-Powered-By: Next.js`.
+
+Repo cũng có:
+
+- `apps/web/public/robots.txt`
+- `apps/web/public/sitemap.xml`
+
+Hai file này tránh việc ZAP lặp lại warning trên `robots.txt` và `sitemap.xml` trả 404.
+
+Sau khi deploy web image mới, kiểm tra header:
+
+```powershell
+curl.exe -i http://<node-external-ip>:30006
+curl.exe -i http://<node-external-ip>:30006/_next/static/chunks/<chunk>.js
+```
+
+### 8.2. OWASP ZAP DAST
+
+Chỉ bật ZAP khi web app đã reachable từ Jenkins/ZAP container.
+
+Jenkins parameters:
+
+```text
+DEPLOY_TARGET_URL=http://<node-external-ip>:30006
+RUN_ZAP=true
+ZAP_TARGET=http://<node-external-ip>:30006
+GITOPS_BRANCH=gitops-testing
+```
+
+Expected result:
+
+- Stage `DAST - OWASP ZAP` chạy thành công.
+- `FAIL-NEW: 0` là điều kiện tốt cho demo.
+- Warning còn lại được xem trong report và ghi nhận nếu cần hardening tiếp.
+- Jenkins artifacts có `zap_report.html` và `zap_report.json`.
+
+Nếu dùng nhầm `ZAP_TARGET=http://<node-external-ip>:30006/api`, ZAP baseline có thể báo spider error vì `/api` root trả 404. Điều này không có nghĩa API prefix của web sai; đó chỉ là target khởi đầu không phù hợp cho baseline crawl.
+
+### 8.3. Post-deploy smoke và Argo CD health gate
+
+Sau stage `Push & GitOps`, pipeline có thể tự xác minh deploy thật thay vì chỉ xem thủ công.
+
+Jenkins parameters khuyến nghị khi app đang chạy trên EKS:
+
+```text
+DEPLOY_TARGET_URL=http://<node-external-ip>:30006
+RUN_ARGO_HEALTH_CHECK=true
+ARGOCD_NAMESPACE=argocd
+ARGOCD_TIMEOUT_SECONDS=300
+```
+
+Smoke test tự động kiểm tra:
+
+```text
+GET http://<node-external-ip>:30006
+GET http://<node-external-ip>:30006/api/health
+```
+
+Argo CD health check tự động đợi các Application trong `ARGOCD_APPS` đạt:
+
+```text
+sync=Synced
+health=Healthy
+```
+
+Nếu Jenkins agent chưa có kubeconfig hoặc chưa được cấp quyền đọc Application trong namespace `argocd`, giữ `RUN_ARGO_HEALTH_CHECK=false`, chạy pipeline để push GitOps/smoke/ZAP, rồi xác minh Argo CD thủ công bằng:
+
+```powershell
+kubectl get applications -n argocd
+```
+
+### 8.4. SCA triage
+
+SCA dùng OWASP Dependency Check trong Jenkins và `pnpm audit` có thể dùng để kiểm tra nhanh local.
+
+Các dependency trực tiếp và override bảo mật đã được xử lý trong `package.json`, `apps/web/package.json` và `pnpm-lock.yaml`. Chi tiết xem:
+
+```text
+docs/security-sca-triage.md
+```
+
+Policy đề xuất:
+
+- Critical/High hoặc CVSS >= 7: pipeline fail bằng `--failOnCVSS 7`, trừ khi team tạo exception record và xử lý lại rule/gate có chủ đích.
+- Medium/Low ở tooling/transitive: có thể chấp nhận cho MVP nếu có record trong SCA triage.
+- ZAP warning: archive report, review và ghi action item nếu cần, không chặn MVP demo.
+- Dependency Check HTML/JSON phải được lưu làm Jenkins artifact.
+
+### 8.5. Prometheus, Grafana, Loki
+
+Apply observability apps:
+
+```powershell
+kubectl apply -f infra\argocd-apps\monitoring.yaml
+kubectl apply -f infra\argocd-apps\loki.yaml
+```
+
+Kiểm tra:
+
+```powershell
+kubectl get app monitoring-stack loki-stack -n argocd
+kubectl get pods -n monitoring
+```
+
+Mở Grafana:
+
+```powershell
+kubectl port-forward -n monitoring svc/monitoring-stack-grafana 3000:80
+```
+
+URL: `http://127.0.0.1:3000`
+
+Credential mặc định trong manifest demo:
+
+```text
+admin / admin
+```
+
+Nếu Grafana từ chối password sau khi đã đổi thủ công, reset lại:
+
+```powershell
+kubectl exec -n monitoring deploy/monitoring-stack-grafana -c grafana -- `
+  grafana-cli admin reset-admin-password admin
+```
+
+Mở Loki API nếu cần kiểm tra trực tiếp:
+
+```powershell
+kubectl port-forward -n monitoring svc/loki-stack 3100:3100
+$query = [uri]::EscapeDataString('{namespace="docvault"}')
+Invoke-RestMethod -Uri "http://127.0.0.1:3100/loki/api/v1/query_range?query=$query&limit=5"
+```
+
+Trong Grafana Explore:
+
+- Datasource: `Loki`
+- Query:
+
+```text
+{namespace="docvault"}
+```
+
+Ảnh bằng chứng nên chụp:
+
+- Grafana dashboard pod/workload health.
+- CPU/RAM theo pod hoặc namespace.
+- Grafana Explore log từ namespace `docvault`.
+- Argo CD app `monitoring-stack` và `loki-stack` ở trạng thái `Synced/Healthy`.
+
+## 9. Pause/Resume EKS Để Tiết Kiệm Chi Phí
 
 Lấy node group name:
 
@@ -344,7 +555,7 @@ kubectl get nodes -o wide
 .\scripts\setup-eks-access.ps1
 ```
 
-## 9. Checklist Trước Khi Mở PR Vào Main
+## 10. Checklist Trước Khi Mở PR Vào Main
 
 Chạy verification trước khi mở PR:
 
@@ -360,8 +571,13 @@ Kiểm tra pipeline:
 - SonarQube scan chạy thành công hoặc quality gate được xử lý theo rule của team.
 - Docker image đã push lên registry.
 - Branch `gitops-testing` đã được Jenkins cập nhật image tag/digest.
-- Argo CD applications `Synced` và `Healthy`.
-- Smoke test EKS đã pass: login Keycloak, upload file, preview file, download file.
+- Stage `Argo CD Health Check` pass nếu bật `RUN_ARGO_HEALTH_CHECK=true`; nếu chưa bật thì có screenshot Argo CD applications `Synced` và `Healthy`.
+- Stage `Post-deploy Smoke Test` pass với `GET /` và `GET /api/health`.
+- Smoke test thủ công EKS đã pass: login Keycloak, upload file, preview file, download file.
+- DAST ZAP đã chạy với `ZAP_TARGET=http://<node-external-ip>:30006`, `FAIL-NEW: 0`, report HTML/JSON đã được archive.
+- Dependency Check report đã được archive và đối chiếu với `docs/security-sca-triage.md`.
+- Observability đã chạy: `monitoring-stack` và `loki-stack` `Synced/Healthy`.
+- Grafana metrics và Loki logs đã có screenshot bằng chứng.
 
 Thông tin nên ghi trong PR:
 
@@ -371,7 +587,7 @@ Thông tin nên ghi trong PR:
 - Ảnh hoặc ghi chú test web app trên EKS.
 - Nếu có thay đổi env, Terraform, Kubernetes, pipeline hoặc security scan thì ghi rõ.
 
-## 10. Troubleshooting Nhanh
+## 11. Troubleshooting Nhanh
 
 ### Keycloak báo `Invalid parameter: redirect_uri`
 
@@ -426,3 +642,41 @@ aws configure list
 
 Kiểm tra `jenkins-docker` container đang chạy, Jenkins container có
 `DOCKER_HOST=tcp://docker:2376`, và Jenkins agent label khớp với Jenkinsfile.
+
+### ZAP trả `script returned exit code 2`
+
+Với `zap-baseline.py`, exit code `2` thường là có warning mới, không phải fail.
+Pipeline hiện đã thêm `-I` để không fail build chỉ vì warning. Nếu vẫn thấy lỗi,
+kiểm tra Jenkins đang chạy commit mới nhất của branch shared library.
+
+### ZAP báo spider error trên `/api`
+
+Không dùng `/api` làm `ZAP_TARGET` baseline. Dùng web base URL:
+
+```text
+http://<node-external-ip>:30006
+```
+
+Web app vẫn dùng `/api/...` để gọi gateway như bình thường.
+
+### Grafana chỉ thấy Loki, không thấy Prometheus
+
+Kiểm tra `infra/argocd-apps/loki.yaml` đã tắt Grafana datasource sidecar của
+chart Loki:
+
+```yaml
+grafana:
+  enabled: false
+  sidecar:
+    datasources:
+      enabled: false
+```
+
+Sau đó apply lại và restart Grafana:
+
+```powershell
+kubectl apply -f infra\argocd-apps\loki.yaml
+kubectl apply -f infra\argocd-apps\monitoring.yaml
+kubectl rollout restart deployment/monitoring-stack-grafana -n monitoring
+kubectl rollout status deployment/monitoring-stack-grafana -n monitoring
+```

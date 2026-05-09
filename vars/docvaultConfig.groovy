@@ -1,6 +1,7 @@
 def call() {
     def gitOpsBranch = env.GITOPS_BRANCH?.trim() ? env.GITOPS_BRANCH.trim() : 'gitops-testing'
     def sonarHostUrl = env.SONAR_HOST_URL?.trim() ? env.SONAR_HOST_URL.trim() : 'http://sonarqube:9000'
+    def deployTargetUrl = env.DEPLOY_TARGET_URL?.trim() ? env.DEPLOY_TARGET_URL.trim() : ''
     def zapTarget = env.ZAP_TARGET?.trim() ? env.ZAP_TARGET.trim() : ''
 
     return [
@@ -30,6 +31,19 @@ def call() {
         helmValuesDir: 'infra/k8s/values',
         gitOpsBranch: gitOpsBranch,
         gitOpsRepoUrl: 'https://github.com/daithang59/docvault.git',
+        deployTargetUrl: deployTargetUrl,
+        argocdNamespace: 'argocd',
+        argocdApps: [
+            'docvault-infra-deps',
+            'docvault-gateway',
+            'docvault-metadata',
+            'docvault-document-service',
+            'docvault-workflow-service',
+            'docvault-audit-service',
+            'docvault-notification-service',
+            'docvault-web'
+        ],
+        argocdTimeoutSeconds: '300',
         zapTarget: zapTarget
     ]
 }
