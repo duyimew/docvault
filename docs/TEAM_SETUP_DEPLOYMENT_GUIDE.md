@@ -171,8 +171,9 @@ Pipeline parameters quan trọng:
 - `DEPLOY_TARGET_URL=http://<node-external-ip>:30006`: web base URL dùng cho smoke test sau deploy. Jenkins sẽ kiểm tra `GET /` và `GET /api/health`.
 - `RUN_ARGO_HEALTH_CHECK=true`: bật khi Jenkins agent đã có `kubectl` và kubeconfig truy cập được namespace `argocd`.
 - `ARGOCD_NAMESPACE=argocd`: namespace chứa Argo CD Application.
-- `ARGOCD_APPS=docvault-infra-deps docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web`: danh sách app cần đợi `Synced/Healthy`.
+- `ARGOCD_APPS=docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web`: danh sách app service chính cần đợi `Synced/Healthy`.
 - `ARGOCD_TIMEOUT_SECONDS=300`: thời gian tối đa chờ Argo CD sync/health.
+- `KUBECONFIG_CREDENTIAL_ID=jenkins-argocd-kubeconfig`: Jenkins Secret file credential chứa kubeconfig read-only cho ServiceAccount `jenkins-argocd-reader`.
 - `RUN_ZAP=false`: để false khi app chưa deploy hoặc NodePort chưa reachable.
 - `ZAP_TARGET=http://<node-external-ip>:30006`: web base URL dùng cho OWASP ZAP baseline scan khi bật ZAP. Nếu để trống, pipeline dùng `DEPLOY_TARGET_URL`. Không dùng `/api` làm target baseline vì `/api` root có thể trả 404; web app vẫn gọi API qua `/api/...` như bình thường.
 

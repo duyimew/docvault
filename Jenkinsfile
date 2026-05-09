@@ -38,13 +38,18 @@ pipeline {
         )
         string(
             name: 'ARGOCD_APPS',
-            defaultValue: 'docvault-infra-deps docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web',
+            defaultValue: 'docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web',
             description: 'Space or comma separated Argo CD Application names to wait for Synced/Healthy.'
         )
         string(
             name: 'ARGOCD_TIMEOUT_SECONDS',
             defaultValue: '300',
             description: 'Maximum seconds to wait for all configured Argo CD Applications to become Synced/Healthy.'
+        )
+        string(
+            name: 'KUBECONFIG_CREDENTIAL_ID',
+            defaultValue: '',
+            description: 'Optional Jenkins Secret file credential ID containing kubeconfig for Argo CD health checks, for example jenkins-argocd-kubeconfig.'
         )
         booleanParam(
             name: 'RUN_ZAP',
@@ -100,6 +105,9 @@ pipeline {
                     cfg.argocdTimeoutSeconds = params.ARGOCD_TIMEOUT_SECONDS?.trim()
                         ? params.ARGOCD_TIMEOUT_SECONDS.trim()
                         : cfg.argocdTimeoutSeconds
+                    cfg.kubeconfigCredentialId = params.KUBECONFIG_CREDENTIAL_ID?.trim()
+                        ? params.KUBECONFIG_CREDENTIAL_ID.trim()
+                        : cfg.kubeconfigCredentialId
 
                     echo ">>> Effective GitOps branch: ${cfg.gitOpsBranch}"
                     echo ">>> FORCE_BUILD_ALL=${params.FORCE_BUILD_ALL}"
@@ -108,6 +116,7 @@ pipeline {
                     echo ">>> ARGOCD_NAMESPACE=${cfg.argocdNamespace}"
                     echo ">>> ARGOCD_APPS=${cfg.argocdApps.join(',')}"
                     echo ">>> ARGOCD_TIMEOUT_SECONDS=${cfg.argocdTimeoutSeconds}"
+                    echo ">>> KUBECONFIG_CREDENTIAL_ID=${cfg.kubeconfigCredentialId ?: '(not set)'}"
                     echo ">>> RUN_ZAP=${params.RUN_ZAP}"
                     echo ">>> ZAP_TARGET=${cfg.zapTarget ?: '(not set)'}"
                 }

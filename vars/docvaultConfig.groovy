@@ -34,7 +34,6 @@ def call() {
         deployTargetUrl: deployTargetUrl,
         argocdNamespace: 'argocd',
         argocdApps: [
-            'docvault-infra-deps',
             'docvault-gateway',
             'docvault-metadata',
             'docvault-document-service',
@@ -44,6 +43,7 @@ def call() {
             'docvault-web'
         ],
         argocdTimeoutSeconds: '300',
+        kubeconfigCredentialId: '',
         zapTarget: zapTarget
     ]
 }

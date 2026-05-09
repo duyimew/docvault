@@ -156,3 +156,7 @@ tfplan
 *.tfplan
 crash.log
 crash.*.log
+
+# Generated kubeconfigs / cluster credentials
+*.kubeconfig
+jenkins-argocd-reader.kubeconfig

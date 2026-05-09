@@ -185,8 +185,9 @@ Jenkins parameters mới:
 ```text
 RUN_ARGO_HEALTH_CHECK=true
 ARGOCD_NAMESPACE=argocd
-ARGOCD_APPS=docvault-infra-deps docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web
+ARGOCD_APPS=docvault-gateway docvault-metadata docvault-document-service docvault-workflow-service docvault-audit-service docvault-notification-service docvault-web
 ARGOCD_TIMEOUT_SECONDS=300
+KUBECONFIG_CREDENTIAL_ID=jenkins-argocd-kubeconfig
 ```
 
 Khi bật, Jenkins sẽ đợi tất cả Argo CD Application được cấu hình đạt:
@@ -195,6 +196,8 @@ Khi bật, Jenkins sẽ đợi tất cả Argo CD Application được cấu hì
 sync=Synced
 health=Healthy
 ```
+
+Health gate mặc định chỉ kiểm tra các app service chính. `docvault-infra-deps` không nằm trong default vì app này có thể `OutOfSync` do hook/secret/runtime drift và nên được xử lý riêng, không chặn pipeline ứng dụng.
 
 Implementation:
 

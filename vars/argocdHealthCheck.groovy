@@ -9,11 +9,13 @@ def call(cfg) {
 
     echo ">>> Waiting for Argo CD applications in namespace '${namespace}' to become Synced/Healthy: ${apps.join(', ')}"
 
-    withEnv([
+    def envVars = [
         "ARGOCD_NAMESPACE=${namespace}",
         "ARGOCD_APPS=${apps.join(' ')}",
         "ARGOCD_TIMEOUT_SECONDS=${timeoutSeconds}"
-    ]) {
+    ]
+
+    def runCheck = {
         sh '''
             set -eu
 
@@ -60,5 +62,17 @@ def call(cfg) {
                 sleep 15
             done
         '''
+    }
+
+    if (cfg.kubeconfigCredentialId?.trim()) {
+        withCredentials([file(credentialsId: cfg.kubeconfigCredentialId.trim(), variable: 'KUBECONFIG')]) {
+            withEnv(envVars) {
+                runCheck()
+            }
+        }
+    } else {
+        withEnv(envVars) {
+            runCheck()
+        }
     }
 }
