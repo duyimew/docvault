@@ -3,8 +3,8 @@ namespace: docvault
 
 image:
   repository: daithang59/audit-service
-  tag: "v47"
-  digest: "sha256:c87bf5480999f24422041b71efc0bc78fdbf13325f919c5c95c1987511136d3b"
+  tag: "v48"
+  digest: "sha256:f30ba5e0cd95bfa268a07f88571a5e9ebe036d4a88fe52b056cf27dc0a90d47a"
 
 healthPath: /health
 
