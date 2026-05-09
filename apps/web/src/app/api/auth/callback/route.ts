@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getRequestOrigin } from '../request-origin';
 
-const KC_BASE = process.env.KEYCLOAK_BASE_URL ?? 'http://localhost:8080';
+const KC_BASE =
+  process.env.KEYCLOAK_INTERNAL_BASE_URL ??
+  process.env.KEYCLOAK_BASE_URL ??
+  'http://localhost:8080';
 const KC_REALM = process.env.KEYCLOAK_REALM ?? 'docvault';
 const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? 'docvault-gateway';
 const CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'dev-gateway-secret';
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3006';
+
+/** Only set Secure flag when actually serving over HTTPS */
+function isSecure(req: NextRequest): boolean {
+  return req.nextUrl.protocol === 'https:' ||
+    req.headers.get('x-forwarded-proto') === 'https';
+}
 
 interface JwtPayload {
   sub: string;
@@ -19,19 +28,21 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const error = searchParams.get('error');
+  const frontendUrl = getRequestOrigin(req);
+  const callbackUrl = `${frontendUrl}/api/auth/callback`;
 
   if (error) {
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(error)}`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error)}`);
   }
 
   // Validate state (CSRF protection)
   const savedState = req.cookies.get('kc_state')?.value;
   if (!savedState || savedState !== state) {
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=invalid_state`);
   }
 
   if (!code) {
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=no_code`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=no_code`);
   }
 
   try {
@@ -45,7 +56,7 @@ export async function GET(req: NextRequest) {
           client_id: CLIENT_ID,
           client_secret: CLIENT_SECRET,
           code,
-          redirect_uri: `${FRONTEND_URL}/api/auth/callback`,
+          redirect_uri: callbackUrl,
         }),
       },
     );
@@ -55,7 +66,7 @@ export async function GET(req: NextRequest) {
     }
 
     const tokens = await tokenRes.json();
-    const { access_token, refresh_token, expires_in } = tokens;
+    const { access_token, refresh_token, id_token, expires_in } = tokens;
 
     const payload = JSON.parse(atob(access_token.split('.')[1])) as JwtPayload;
     const user = {
@@ -65,13 +76,13 @@ export async function GET(req: NextRequest) {
       roles: payload.realm_access?.roles ?? [],
     };
 
-    const response = NextResponse.redirect(`${FRONTEND_URL}/login?auth=ok`);
+    const response = NextResponse.redirect(`${frontendUrl}/login?auth=ok`);
 
     response.cookies.delete('kc_state');
 
     response.cookies.set('dv_access_token', access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure(req),
       sameSite: 'lax',
       maxAge: expires_in ?? 3600,
       path: '/',
@@ -80,7 +91,17 @@ export async function GET(req: NextRequest) {
     if (refresh_token) {
       response.cookies.set('dv_refresh_token', refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isSecure(req),
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/',
+      });
+    }
+
+    if (id_token) {
+      response.cookies.set('dv_id_token', id_token, {
+        httpOnly: true,
+        secure: isSecure(req),
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',
@@ -89,7 +110,7 @@ export async function GET(req: NextRequest) {
 
     response.cookies.set('dv_user', JSON.stringify(user), {
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure(req),
       sameSite: 'lax',
       maxAge: 10,
       path: '/',
@@ -98,6 +119,6 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (err) {
     console.error('Keycloak token exchange failed:', err);
-    return NextResponse.redirect(`${FRONTEND_URL}/login?error=token_exchange_failed`);
+    return NextResponse.redirect(`${frontendUrl}/login?error=token_exchange_failed`);
   }
 }

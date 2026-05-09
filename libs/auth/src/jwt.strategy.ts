@@ -4,6 +4,33 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import * as jwksRsa from 'jwks-rsa';
 import { KeycloakAccessToken, ServiceUser } from './types';
 
+function normalizeUrl(value: string): string {
+  return value.replace(/\/$/, '');
+}
+
+function getKeycloakIssuers(baseUrl: string, realm: string): string[] {
+  const configuredIssuers = (process.env.KEYCLOAK_ISSUER ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map(normalizeUrl);
+  const internalIssuer = `${normalizeUrl(baseUrl)}/realms/${realm}`;
+
+  return Array.from(new Set([...configuredIssuers, internalIssuer]));
+}
+
+function getKeycloakJwksUri(baseUrl: string, realm: string): string {
+  const explicitJwksUri = process.env.KEYCLOAK_JWKS_URI?.trim();
+  if (explicitJwksUri) {
+    return explicitJwksUri;
+  }
+
+  const jwksBaseUrl = normalizeUrl(
+    process.env.KEYCLOAK_JWKS_BASE_URL ?? baseUrl,
+  );
+  return `${jwksBaseUrl}/realms/${realm}/protocol/openid-connect/certs`;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly audience?: string;
@@ -11,19 +38,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     const baseUrl = process.env.KEYCLOAK_BASE_URL!;
     const realm = process.env.KEYCLOAK_REALM!;
-    const issuer = `${baseUrl}/realms/${realm}`;
+    const issuers = getKeycloakIssuers(baseUrl, realm);
+    const jwksUri = getKeycloakJwksUri(baseUrl, realm);
     const audience = process.env.KEYCLOAK_AUDIENCE;
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      issuer,
+      issuer: issuers,
       algorithms: ['RS256'],
       ignoreExpiration: false,
       secretOrKeyProvider: jwksRsa.passportJwtSecret({
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 10,
-        jwksUri: `${issuer}/protocol/openid-connect/certs`,
+        jwksUri,
       }),
     });
 

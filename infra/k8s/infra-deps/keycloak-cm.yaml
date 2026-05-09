@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-config
+data:
+  realm-docvault.json: |
+    {
+      "realm": "docvault",
+      "enabled": true,
+      "displayName": "DocVault Realm",
+      "loginWithEmailAllowed": false,
+      "registrationAllowed": false,
+      "roles": {
+        "realm": [
+          { "name": "viewer" },
+          { "name": "editor" },
+          { "name": "approver" },
+          { "name": "co" },
+          { "name": "compliance_officer" },
+          { "name": "admin" }
+        ]
+      },
+      "requiredActions": [
+        {
+          "alias": "UPDATE_PASSWORD",
+          "name": "Update Password",
+          "providerId": "UPDATE_PASSWORD",
+          "enabled": true,
+          "defaultAction": false,
+          "priority": 30,
+          "config": {}
+        },
+        {
+          "alias": "UPDATE_PROFILE",
+          "name": "Update Profile",
+          "providerId": "UPDATE_PROFILE",
+          "enabled": true,
+          "defaultAction": false,
+          "priority": 40,
+          "config": {}
+        },
+        {
+          "alias": "VERIFY_EMAIL",
+          "name": "Verify Email",
+          "providerId": "VERIFY_EMAIL",
+          "enabled": true,
+          "defaultAction": false,
+          "priority": 50,
+          "config": {}
+        }
+      ],
+      "clients": [
+        {
+          "clientId": "docvault-gateway",
+          "name": "DocVault Gateway API",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "dev-gateway-secret",
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": true,
+          "redirectUris": [
+            "http://localhost:3000/*",
+            "http://localhost:3006/*",
+            "http://localhost:3006/api/auth/callback"
+          ],
+          "webOrigins": ["http://localhost:3000", "http://localhost:3006"],
+          "attributes": {
+            "access.token.lifespan": "900",
+            "post.logout.redirect.uris": "+"
+          },
+          "fullScopeAllowed": true
+        }
+      ],
+      "users": [
+        {
+          "username": "viewer1",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Viewer",
+          "lastName": "One",
+          "email": "viewer1@docvault.local",
+          "requiredActions": [],
+          "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+          "realmRoles": ["viewer"]
+        },
+        {
+          "username": "editor1",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Editor",
+          "lastName": "One",
+          "email": "editor1@docvault.local",
+          "requiredActions": [],
+          "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+          "realmRoles": ["editor"]
+        },
+        {
+          "username": "approver1",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Approver",
+          "lastName": "One",
+          "email": "approver1@docvault.local",
+          "requiredActions": [],
+          "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+          "realmRoles": ["approver"]
+        },
+        {
+          "username": "co1",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "CO",
+          "lastName": "One",
+          "email": "co1@docvault.local",
+          "requiredActions": [],
+          "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+          "realmRoles": ["co", "compliance_officer"]
+        },
+        {
+          "username": "admin1",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Admin",
+          "lastName": "One",
+          "email": "admin1@docvault.local",
+          "requiredActions": [],
+          "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+          "realmRoles": ["admin"]
+        }
+      ]
+    }

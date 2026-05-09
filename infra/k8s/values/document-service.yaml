@@ -1,0 +1,40 @@
+# document-service values
+namespace: docvault
+
+image:
+  repository: daithang59/document-service
+  tag: "v33"
+  digest: "sha256:629f1a89327f04197b4f01a0a10576e4cc495d99e59c1f12b4824dffed9044ee"
+
+healthPath: /health
+
+service:
+  type: ClusterIP
+  port: 3002
+env:
+  NODE_ENV: production
+  PORT: "3002"
+  KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  # Patched at runtime by scripts/setup-eks-access.ps1 to the public
+  # Keycloak NodePort issuer while JWKS stays on KEYCLOAK_BASE_URL.
+  KEYCLOAK_ISSUER: "http://keycloak:8080/realms/docvault"
+  KEYCLOAK_REALM: "docvault"
+  KEYCLOAK_AUDIENCE: "docvault-gateway"
+  METADATA_SERVICE_URL: "http://docvault-metadata:3001"
+  AUDIT_SERVICE_URL: "http://docvault-audit-service:3004"
+  S3_ENDPOINT: "http://minio:9000"
+  S3_BUCKET: "docvault"
+  S3_REGION: "us-east-1"
+  S3_FORCE_PATH_STYLE: "true"
+
+envFrom:
+  - secretRef:
+      name: docvault-app-secrets
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

@@ -1,0 +1,77 @@
+# Use node 20 alpine as base
+FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable pnpm
+
+# Stage 1: Prune the monorepo to only what's needed for the specific service
+FROM base AS builder
+RUN apk update && apk add --no-cache libc6-compat
+WORKDIR /app
+RUN pnpm install turbo --global
+COPY . .
+ARG SERVICE_NAME
+RUN turbo prune ${SERVICE_NAME} --docker
+
+# Stage 2: Install dependencies and build the service
+FROM base AS installer
+RUN apk update && apk add --no-cache libc6-compat
+WORKDIR /app
+
+# First copy the pruned package.json and lockfile
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the source and build
+COPY --from=builder /app/out/full/ .
+ARG SERVICE_NAME
+# Generate Prisma client if it exists in the service
+RUN if [ -f "services/${SERVICE_NAME}/prisma/schema.prisma" ]; then \
+      cd services/${SERVICE_NAME} && pnpm prisma generate; \
+    fi
+RUN pnpm turbo run build --filter=${SERVICE_NAME}...
+RUN mkdir -p /tmp/service-prisma && \
+    if [ -d "services/${SERVICE_NAME}/prisma" ]; then \
+      cp -a "services/${SERVICE_NAME}/prisma" /tmp/service-prisma/prisma; \
+    fi && \
+    if [ -f "services/${SERVICE_NAME}/prisma.config.ts" ]; then \
+      cp "services/${SERVICE_NAME}/prisma.config.ts" /tmp/service-prisma/prisma.config.ts; \
+    fi
+
+# Stage 3: Create the final production image
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Create a user to run for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+
+ARG SERVICE_NAME
+ENV SERVICE_NAME=${SERVICE_NAME}
+
+# Copy built files and necessary node_modules while maintaining structure to preserve pnpm symlinks
+COPY --from=installer --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=installer --chown=nestjs:nodejs /app/services/${SERVICE_NAME}/package.json ./services/${SERVICE_NAME}/package.json
+COPY --from=installer --chown=nestjs:nodejs /app/services/${SERVICE_NAME}/dist ./services/${SERVICE_NAME}/dist
+COPY --from=installer --chown=nestjs:nodejs /app/services/${SERVICE_NAME}/node_modules ./services/${SERVICE_NAME}/node_modules
+
+COPY --from=installer --chown=nestjs:nodejs /app/services/${SERVICE_NAME}/generated* ./services/${SERVICE_NAME}/generated/
+COPY --from=installer --chown=nestjs:nodejs /tmp/service-prisma/ ./services/${SERVICE_NAME}/
+# Copy root package.json for potential dependency lookups
+COPY --from=installer --chown=nestjs:nodejs /app/package.json ./package.json
+
+# Copy shared libs (if they exist and are needed at runtime)
+COPY --from=installer --chown=nestjs:nodejs /app/libs ./libs
+
+USER nestjs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "const http=require('http');const port=process.env.PORT||3000;const paths=['/health','/api/health'];const check=(i)=>{if(i>=paths.length)process.exit(1);const req=http.get({host:'127.0.0.1',port,path:paths[i],timeout:4000},(res)=>{res.resume();if(res.statusCode&&res.statusCode>=200&&res.statusCode<400)process.exit(0);check(i+1);});req.on('error',()=>check(i+1));req.on('timeout',()=>{req.destroy();check(i+1);});};check(0);"
+
+# Run the service from its own directory to ensure relative node_modules resolution
+WORKDIR /app/services/${SERVICE_NAME}
+CMD ["node", "dist/main"]

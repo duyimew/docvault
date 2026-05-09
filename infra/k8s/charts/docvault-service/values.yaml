@@ -1,0 +1,37 @@
+# Default values for docvault-service.
+# This file will be overwritten for each service (gateway, metadata, etc.)
+
+replicaCount: 1
+namespace: docvault
+
+image:
+  repository: daithang59/docvault-service
+  pullPolicy: Always
+  # Overridden by Jenkins during build
+  tag: "0.1.0"
+  digest: ""
+
+service:
+  type: ClusterIP
+  port: 3000
+
+healthPath: /health
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env:
+  NODE_ENV: production
+
+envFrom: []
+
+migration:
+  enabled: false
+  command: "./node_modules/.bin/prisma migrate deploy"
+  backoffLimit: 3
+  resources: {}

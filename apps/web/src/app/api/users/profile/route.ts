@@ -8,7 +8,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const gatewayUrl = process.env.GATEWAY_URL ?? 'http://localhost:3000';
+    const defaultGatewayUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'http://docvault-gateway:3000'
+        : 'http://localhost:3000';
+    const gatewayUrl = process.env.GATEWAY_URL ?? defaultGatewayUrl;
     const response = await fetch(`${gatewayUrl}/api/users/profile`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,

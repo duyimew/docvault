@@ -22,20 +22,18 @@ export function useDownloadDocument(options?: UseDownloadDocumentOptions) {
 
       // 2. Presign URL — pass grantToken so document-service skips re-authorization
       const result = await presignDownload(docId, authorization.version, authorization.grantToken);
+      const resolvedVersion = result.version ?? authorization.version;
+      const resolvedFilename = result.filename || filename;
 
-      if (result.url) {
-        // Non-watermark files: download directly from MinIO via presigned URL
-        triggerBrowserDownload(result.url, result.filename || filename);
-      } else {
-        // Watermark required: fetch via authenticated axios request, then download blob
-        const streamUrl = `/documents/${docId}/versions/${authorization.version}/stream?token=${encodeURIComponent(authorization.grantToken)}`;
-        const response = await apiClient.get(streamUrl, { responseType: 'blob' });
+      // Always stream through the gateway. In EKS, MinIO is cluster-internal, so
+      // browser-facing presigned URLs like http://minio:9000 are not reachable.
+      const streamUrl = `/documents/${docId}/versions/${resolvedVersion}/stream?token=${encodeURIComponent(authorization.grantToken)}`;
+      const response = await apiClient.get(streamUrl, { responseType: 'blob' });
 
-        const blobUrl = URL.createObjectURL(response.data);
-        triggerBrowserDownload(blobUrl, result.filename || filename);
-        // Free memory after a short delay to allow download to start
-        setTimeout(() => revokeObjectUrl(blobUrl), 5000);
-      }
+      const blobUrl = URL.createObjectURL(response.data);
+      triggerBrowserDownload(blobUrl, resolvedFilename);
+      // Free memory after a short delay to allow download to start
+      setTimeout(() => revokeObjectUrl(blobUrl), 5000);
     } catch (err) {
       options?.onError?.(getErrorMessage(err));
     } finally {

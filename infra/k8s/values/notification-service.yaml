@@ -1,0 +1,27 @@
+# notification-service values
+namespace: docvault
+
+image:
+  repository: daithang59/notification-service
+  tag: "v33"
+  digest: "sha256:5b82c2a9d3c30220b85396791b9b2554c4d4297f65df546066f6f1ef814ca926"
+
+healthPath: /health
+
+service:
+  type: ClusterIP
+  port: 3005
+env:
+  NODE_ENV: production
+  PORT: "3005"
+  KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  # Patched at runtime by scripts/setup-eks-access.ps1 to the public
+  # Keycloak NodePort issuer while JWKS stays on KEYCLOAK_BASE_URL.
+  KEYCLOAK_ISSUER: "http://keycloak:8080/realms/docvault"
+  KEYCLOAK_REALM: "docvault"
+  KEYCLOAK_AUDIENCE: "docvault-gateway"
+  AUDIT_SERVICE_URL: "http://docvault-audit-service:3004"
+
+envFrom:
+  - secretRef:
+      name: docvault-app-secrets

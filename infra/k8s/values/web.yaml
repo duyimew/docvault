@@ -1,0 +1,27 @@
+# web app values
+namespace: docvault
+
+image:
+  repository: daithang59/docvault
+  tag: "v33"
+  digest: "sha256:fab71c1e6717778a8a40cb6817b9bc67f5baafbb488687e153524c2b707970a9"
+
+healthPath: /api/health
+
+service:
+  type: NodePort
+  port: 3006
+  nodePort: 30006
+env:
+  NODE_ENV: production
+  PORT: "3006"
+  NEXT_PUBLIC_APP_NAME: "DocVault"
+  NEXT_PUBLIC_API_BASE_URL: "/api"
+  GATEWAY_URL: "http://docvault-gateway:3000"
+  KEYCLOAK_INTERNAL_BASE_URL: "http://keycloak:8080"
+  KEYCLOAK_REALM: "docvault"
+  KEYCLOAK_CLIENT_ID: "docvault-gateway"
+  # FRONTEND_URL and KEYCLOAK_BROWSER_BASE_URL are patched at runtime
+  # by scripts/setup-eks-access.ps1 with the current node external IP.
+  FRONTEND_URL: "http://localhost:3006"
+  KEYCLOAK_BROWSER_BASE_URL: "http://localhost:8080"

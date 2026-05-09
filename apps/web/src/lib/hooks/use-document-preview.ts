@@ -9,6 +9,11 @@ interface UseDocumentPreviewOptions {
   onError?: (message: string) => void;
 }
 
+function buildPreviewPath(docId: string, version?: number): string {
+  const endpoint = apiEndpoints.documents.preview(docId);
+  return `${endpoint}${version !== undefined ? `?version=${version}` : ''}`;
+}
+
 export function useDocumentPreview(options?: UseDocumentPreviewOptions) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,11 +27,7 @@ export function useDocumentPreview(options?: UseDocumentPreviewOptions) {
   ): Promise<string> {
     setIsLoading(true);
     try {
-      const endpoint = apiEndpoints.documents.preview(docId);
-      const base = apiClient.getUri().replace(/\/$/, '');
-      const url = `${base}${endpoint}${version !== undefined ? `?version=${version}` : ''}`;
-
-      const response = await apiClient.get(url, {
+      const response = await apiClient.get(buildPreviewPath(docId, version), {
         responseType: 'arraybuffer',
       });
 
@@ -58,11 +59,7 @@ export function useDocumentPreview(options?: UseDocumentPreviewOptions) {
   ): Promise<{ data: ArrayBuffer; filename: string }> {
     setIsLoading(true);
     try {
-      const endpoint = apiEndpoints.documents.preview(docId);
-      const base = apiClient.getUri().replace(/\/$/, '');
-      const url = `${base}${endpoint}${version !== undefined ? `?version=${version}` : ''}`;
-
-      const response = await apiClient.get(url, {
+      const response = await apiClient.get(buildPreviewPath(docId, version), {
         responseType: 'arraybuffer',
       }).catch((err: unknown) => {
         let bodyStr = '';

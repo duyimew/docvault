@@ -57,6 +57,7 @@ async submit(@Req() req: any) {
 
 ```env
 KEYCLOAK_BASE_URL=http://localhost:8080
+KEYCLOAK_ISSUER=http://localhost:8080/realms/docvault # optional when token issuer differs from internal URL
 KEYCLOAK_REALM=docvault
 KEYCLOAK_AUDIENCE=docvault-gateway   # optional
 DOWNLOAD_GRANT_SECRET=...             # used by metadata-service only

@@ -69,7 +69,8 @@
       "webOrigins": ["http://localhost:3000", "http://localhost:3006"],
 
       "attributes": {
-        "access.token.lifespan": "900"
+        "access.token.lifespan": "900",
+        "post.logout.redirect.uris": "+"
       },
       "fullScopeAllowed": true
     }

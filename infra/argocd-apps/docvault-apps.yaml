@@ -1,0 +1,209 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: docvault-gateway
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/daithang59/docvault.git'
+    targetRevision: gitops-testing
+    path: infra/k8s/charts/docvault-service
+    helm:
+      valueFiles:
+        - ../../values/gateway.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: docvault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/env
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: docvault-metadata
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/daithang59/docvault.git'
+    targetRevision: gitops-testing
+    path: infra/k8s/charts/docvault-service
+    helm:
+      valueFiles:
+        - ../../values/metadata-service.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: docvault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/env
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: docvault-audit-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/daithang59/docvault.git'
+    targetRevision: gitops-testing
+    path: infra/k8s/charts/docvault-service
+    helm:
+      valueFiles:
+        - ../../values/audit-service.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: docvault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/env
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: docvault-notification-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/daithang59/docvault.git'
+    targetRevision: gitops-testing
+    path: infra/k8s/charts/docvault-service
+    helm:
+      valueFiles:
+        - ../../values/notification-service.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: docvault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/env
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: docvault-workflow-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/daithang59/docvault.git'
+    targetRevision: gitops-testing
+    path: infra/k8s/charts/docvault-service
+    helm:
+      valueFiles:
+        - ../../values/workflow-service.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: docvault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/env
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: docvault-document-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/daithang59/docvault.git'
+    targetRevision: gitops-testing
+    path: infra/k8s/charts/docvault-service
+    helm:
+      valueFiles:
+        - ../../values/document-service.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: docvault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/env
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: docvault-web
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/daithang59/docvault.git'
+    targetRevision: gitops-testing
+    path: infra/k8s/charts/docvault-service
+    helm:
+      valueFiles:
+        - ../../values/web.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: docvault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/env

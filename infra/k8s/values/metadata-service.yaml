@@ -1,0 +1,39 @@
+# metadata-service values
+namespace: docvault
+
+image:
+  repository: daithang59/metadata-service
+  tag: "v33"
+  digest: "sha256:c0b17a14f136a21a62483ccbaf9c22c1cb1966884444a74897327c5764d49f3b"
+
+healthPath: /health
+
+service:
+  type: ClusterIP
+  port: 3001
+env:
+  NODE_ENV: production
+  PORT: "3001"
+  KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  # Patched at runtime by scripts/setup-eks-access.ps1 to the public
+  # Keycloak NodePort issuer while JWKS stays on KEYCLOAK_BASE_URL.
+  KEYCLOAK_ISSUER: "http://keycloak:8080/realms/docvault"
+  KEYCLOAK_REALM: "docvault"
+  KEYCLOAK_AUDIENCE: "docvault-gateway"
+  AUDIT_SERVICE_URL: "http://docvault-audit-service:3004"
+
+envFrom:
+  - secretRef:
+      name: docvault-app-secrets
+
+migration:
+  enabled: true
+  command: "./node_modules/.bin/prisma migrate deploy"
+  backoffLimit: 3
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi

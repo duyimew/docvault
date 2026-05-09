@@ -433,6 +433,7 @@ docvault/
 │   ├── start-sequential.mjs   # Sequential startup script for all services
 │   └── demo.sh                 # Demo script
 └── docs/
+    ├── TEAM_SETUP_DEPLOYMENT_GUIDE.md # Team setup, CI/CD, EKS and PR checklist
     ├── demo-users.md           # Account & permission info
     ├── demo-flow.md            # Step-by-step demo scenarios
     ├── ERD.md                  # Entity Relationship Diagram

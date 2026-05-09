@@ -1,0 +1,45 @@
+# gateway service values
+namespace: docvault
+
+image:
+  repository: daithang59/gateway
+  tag: "v33"
+  digest: "sha256:28bfc4ee3f0d14bbf727ac53ee195a4d6fa7ab500ec1c00e5da1f5d71eb5557f"
+
+healthPath: /api/health
+
+service:
+  type: ClusterIP
+  port: 3000
+env:
+  NODE_ENV: production
+  PORT: "3000"
+  KEYCLOAK_BASE_URL: "http://keycloak:8080"
+  # Patched at runtime by scripts/setup-eks-access.ps1 to the public
+  # Keycloak NodePort issuer while JWKS stays on KEYCLOAK_BASE_URL.
+  KEYCLOAK_ISSUER: "http://keycloak:8080/realms/docvault"
+  KEYCLOAK_REALM: "docvault"
+  KEYCLOAK_AUDIENCE: "docvault-gateway"
+  KEYCLOAK_CLIENT_ID: "docvault-gateway"
+  GATEWAY_URL: "http://docvault-gateway:3000"
+  METADATA_SERVICE_URL: "http://docvault-metadata:3001"
+  DOCUMENT_SERVICE_URL: "http://docvault-document-service:3002"
+  WORKFLOW_SERVICE_URL: "http://docvault-workflow-service:3003"
+  AUDIT_SERVICE_URL: "http://docvault-audit-service:3004"
+  NOTIFICATION_SERVICE_URL: "http://docvault-notification-service:3005"
+  # FRONTEND_URL and ALLOWED_ORIGINS are patched at runtime
+  # by scripts/setup-eks-access.ps1 with the current node external IP.
+  FRONTEND_URL: "http://localhost:3006"
+  ALLOWED_ORIGINS: "http://localhost:3006"
+
+envFrom:
+  - secretRef:
+      name: docvault-app-secrets
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

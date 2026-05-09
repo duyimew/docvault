@@ -14,18 +14,27 @@ function deleteCookie(name: string) {
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
 
   const [ssoLoading, setSsoLoading] = useState(false);
 
   const errorParam = searchParams.get('error');
   const authStatus = searchParams.get('auth');
+  const loggedOut = searchParams.get('logged_out');
   const callbackError = useMemo(() => {
     return errorParam ? `Login failed: ${errorParam}` : null;
   }, [errorParam]);
 
   // ── Handle Keycloak callback redirects ─────────────────────────────────────
   useEffect(() => {
+    if (loggedOut) {
+      logout();
+      deleteCookie('dv_user');
+      deleteCookie('kc_state');
+      router.replace('/login');
+      return;
+    }
+
     if (errorParam) {
       // Clean the URL
       router.replace('/login');
@@ -45,17 +54,16 @@ export default function LoginPage() {
             accessToken: data.accessToken,
             user: data.user,
           });
-          // Clear the short-lived cookies now that session is in localStorage
+          // Clear only the short-lived user bootstrap cookie. Keep HttpOnly
+          // token cookies so the app can rehydrate after refreshes or redirects.
           deleteCookie('dv_user');
-          deleteCookie('dv_access_token');
-          deleteCookie('dv_refresh_token');
           router.push(ROUTES.DASHBOARD);
         })
         .catch(() => {
           router.replace('/login');
         });
     }
-  }, [searchParams, authStatus, errorParam, login, router]);
+  }, [authStatus, errorParam, loggedOut, login, logout, router]);
 
   function handleSSOLogin() {
     setSsoLoading(true);
