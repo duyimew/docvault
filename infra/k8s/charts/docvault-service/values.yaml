@@ -5,15 +5,17 @@ replicaCount: 1
 namespace: docvault
 
 image:
-  repository: duyimew/gateway
-  pullPolicy: IfNotPresent
+  repository: daithang59/docvault-service
+  pullPolicy: Always
   # Overridden by Jenkins during build
-  tag: "latest"
-  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  tag: "0.1.0"
+  digest: ""
 
 service:
   type: ClusterIP
   port: 3000
+
+healthPath: /health
 
 resources:
   limits:
@@ -28,5 +30,9 @@ env:
 
 envFrom: []
 
-probes:
-  path: /health
+
+migration:
+  enabled: false
+  command: "./node_modules/.bin/prisma migrate deploy"
+  backoffLimit: 3
+  resources: {}

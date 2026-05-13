@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/duyimew/docvault.git'
+    repoURL: 'https://github.com/daithang59/docvault.git'
     targetRevision: gitops-testing
     path: infra/k8s/charts/docvault-service
     helm:
@@ -14,11 +14,13 @@ spec:
         - ../../values/gateway.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -28,7 +30,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/duyimew/docvault.git'
+    repoURL: 'https://github.com/daithang59/docvault.git'
     targetRevision: gitops-testing
     path: infra/k8s/charts/docvault-service
     helm:
@@ -36,11 +38,13 @@ spec:
         - ../../values/metadata-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -50,7 +54,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/duyimew/docvault.git'
+    repoURL: 'https://github.com/daithang59/docvault.git'
     targetRevision: gitops-testing
     path: infra/k8s/charts/docvault-service
     helm:
@@ -58,11 +62,13 @@ spec:
         - ../../values/audit-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -72,7 +78,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/duyimew/docvault.git'
+    repoURL: 'https://github.com/daithang59/docvault.git'
     targetRevision: gitops-testing
     path: infra/k8s/charts/docvault-service
     helm:
@@ -80,11 +86,13 @@ spec:
         - ../../values/notification-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -94,7 +102,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/duyimew/docvault.git'
+    repoURL: 'https://github.com/daithang59/docvault.git'
     targetRevision: gitops-testing
     path: infra/k8s/charts/docvault-service
     helm:
@@ -102,11 +110,13 @@ spec:
         - ../../values/workflow-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -116,7 +126,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/duyimew/docvault.git'
+    repoURL: 'https://github.com/daithang59/docvault.git'
     targetRevision: gitops-testing
     path: infra/k8s/charts/docvault-service
     helm:
@@ -124,11 +134,13 @@ spec:
         - ../../values/document-service.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -138,7 +150,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/duyimew/docvault.git'
+    repoURL: 'https://github.com/daithang59/docvault.git'
     targetRevision: gitops-testing
     path: infra/k8s/charts/docvault-service
     helm:
@@ -146,8 +158,10 @@ spec:
         - ../../values/web.yaml
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: default
+    namespace: docvault
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

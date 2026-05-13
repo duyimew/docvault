@@ -1,24 +1,42 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: minio
-  namespace: docvault
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app: minio
+    component: minio
 spec:
+  serviceName: minio
   replicas: 1
   selector:
     matchLabels:
       app: minio
+      component: minio
   template:
     metadata:
       labels:
         app: minio
+        component: minio
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: minio
           image: minio/minio:RELEASE.2025-01-20T14-49-07Z
           args: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
           securityContext:
+            allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: 9000
             - containerPort: 9001
@@ -30,9 +48,21 @@ spec:
           volumeMounts:
             - name: minio-data
               mountPath: /data
+            - name: tmp
+              mountPath: /tmp
       volumes:
-        - name: minio-data
+        - name: tmp
           emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: minio-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: docvault-gp3
+        resources:
+          requests:
+            storage: 20Gi
 ---
 apiVersion: v1
 kind: Service
@@ -42,6 +72,7 @@ metadata:
 spec:
   selector:
     app: minio
+    component: minio
   ports:
     - name: api
       protocol: TCP

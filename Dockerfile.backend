@@ -31,6 +31,13 @@ RUN if [ -f "services/${SERVICE_NAME}/prisma/schema.prisma" ]; then \
       cd services/${SERVICE_NAME} && pnpm prisma generate; \
     fi
 RUN pnpm turbo run build --filter=${SERVICE_NAME}...
+RUN mkdir -p /tmp/service-prisma && \
+    if [ -d "services/${SERVICE_NAME}/prisma" ]; then \
+      cp -a "services/${SERVICE_NAME}/prisma" /tmp/service-prisma/prisma; \
+    fi && \
+    if [ -f "services/${SERVICE_NAME}/prisma.config.ts" ]; then \
+      cp "services/${SERVICE_NAME}/prisma.config.ts" /tmp/service-prisma/prisma.config.ts; \
+    fi
 
 # Stage 3: Create the final production image
 FROM base AS runner
@@ -51,6 +58,7 @@ COPY --from=installer --chown=nestjs:nodejs /app/services/${SERVICE_NAME}/dist .
 COPY --from=installer --chown=nestjs:nodejs /app/services/${SERVICE_NAME}/node_modules ./services/${SERVICE_NAME}/node_modules
 
 COPY --from=installer --chown=nestjs:nodejs /app/services/${SERVICE_NAME}/generated* ./services/${SERVICE_NAME}/generated/
+COPY --from=installer --chown=nestjs:nodejs /tmp/service-prisma/ ./services/${SERVICE_NAME}/
 # Copy root package.json for potential dependency lookups
 COPY --from=installer --chown=nestjs:nodejs /app/package.json ./package.json
 

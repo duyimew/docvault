@@ -13,12 +13,23 @@ spec:
       labels:
         app: keycloak
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:26.0
           args: ["start-dev", "--import-realm"]
           securityContext:
-            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: 8080
           env:
@@ -31,13 +42,21 @@ spec:
             - name: KC_HOSTNAME_STRICT
               value: "false"
           volumeMounts:
+            - name: kc-data
+              mountPath: /opt/keycloak/data
             - name: realm-import
               mountPath: /opt/keycloak/data/import/realm-docvault.json
               subPath: realm-docvault.json
+            - name: kc-tmp
+              mountPath: /tmp
       volumes:
+        - name: kc-data
+          emptyDir: {}
         - name: realm-import
           configMap:
             name: keycloak-realm-config
+        - name: kc-tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

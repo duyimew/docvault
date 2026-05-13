@@ -77,7 +77,8 @@ data:
             "http://10.0.3.134:30006"
           ],
           "attributes": {
-            "access.token.lifespan": "900"
+            "access.token.lifespan": "900",
+            "post.logout.redirect.uris": "+"
           },
           "fullScopeAllowed": true
         }

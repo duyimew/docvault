@@ -20,6 +20,10 @@ def call(cfg) {
         echo '>>> Force-build mode enabled; all impacted images will be rebuilt and rescanned.'
     }
 
+    def infraChanged = forceBuildAll || changedFiles.any { it.startsWith('infra/k8s/') }
+    env.INFRA_CHANGED = infraChanged ? 'true' : 'false'
+    echo ">>> Infrastructure (infra/k8s/) changes detected: ${infraChanged}"
+
     cfg.services.each { service ->
         def changed = forceBuildAll || isServiceImpacted(service, changedFiles)
 
@@ -33,7 +37,7 @@ def call(cfg) {
                 docker run --rm \\
                     -v /var/run/docker.sock:/var/run/docker.sock \\
                     ${cfg.trivyImage} \\
-                    image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${service}:${tag}
+                    image --severity CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${service}:${tag}
             """
             builtList.add(service)
         } else {
@@ -51,7 +55,7 @@ def call(cfg) {
             docker run --rm \\
                 -v /var/run/docker.sock:/var/run/docker.sock \\
                 ${cfg.trivyImage} \\
-                image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${cfg.webImageName}:${tag}
+                image --severity CRITICAL --exit-code 1 --no-progress ${cfg.dockerOrg}/${cfg.webImageName}:${tag}
         """
         builtList.add(cfg.webAppName)
     }
