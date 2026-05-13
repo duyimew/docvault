@@ -4,7 +4,7 @@ def call() {
 
     sh '''
         mkdir -p dependency-check-report
-        mkdir -p /var/jenkins_home/dependency-check-data
+        mkdir -p ${WORKSPACE}/var/jenkins_home/dependency-check-data
     '''
 
     withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
