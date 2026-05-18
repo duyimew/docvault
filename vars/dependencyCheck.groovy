@@ -42,6 +42,7 @@ def call(cfg = [:]) {
                 --out /report \\
                 --failOnCVSS 7 \\
                 --disableKnownExploited \\
+		--noupdate \\
                 ${nvdFlag}
         """
     }
