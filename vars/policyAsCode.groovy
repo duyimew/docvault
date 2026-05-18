@@ -1,5 +1,7 @@
 def call(cfg) {
     echo '>>> Running Policy as Code Scan (Kyverno CLI)...'
+    
+    // 1. Run the scan and save result to report
     sh """
         set -eu
         mkdir -p policy-report
@@ -20,22 +22,27 @@ def call(cfg) {
         fi
 
         # Use kyverno apply to check policies against resources
+        # Use set +e or || true so the shell doesn't exit on Kyverno failure
+        set +e
         docker run --rm \
             -v ${env.WORKSPACE}:/workspace \
             -w /workspace \
             ghcr.io/kyverno/kyverno-cli:v1.12.0 \
             apply /workspace/policies/kyverno \
-            $RESOURCES \
+            \$RESOURCES \
             --detailed-results \
-            > policy-report/kyverno-report.txt 2>&1 || status=$?
+            > policy-report/kyverno-report.txt 2>&1
+        set -e
 
         cat policy-report/kyverno-report.txt
+    """
 
-        if grep -q "fail" policy-report/kyverno-report.txt; then
-            echo ">>> Policy violations detected! (Warning-only mode)"
-            unstable("Policy as Code violations detected.")
-        else
-            echo ">>> Policy as Code scan passed."
-        fi
-        """
-        }
+    // 2. Check the report file for failures using Groovy
+    def report = readFile('policy-report/kyverno-report.txt')
+    if (report.contains('fail')) {
+        echo ">>> Policy violations detected! (Warning-only mode)"
+        unstable("Policy as Code violations detected.")
+    } else {
+        echo ">>> Policy as Code scan passed."
+    }
+}
