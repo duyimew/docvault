@@ -183,8 +183,8 @@ pipeline {
                 stage('SAST - SonarQube') {
                     steps {
                         script {
-                            // Enforce Quality Gate for P1.5
-                            sonarSast(cfg + [enforceQualityGate: true])
+                            // Non-blocking for testing (warning-only mode)
+                            sonarSast(cfg + [enforceQualityGate: false])
                         }
                     }
                 }

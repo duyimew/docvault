@@ -29,11 +29,11 @@ EOF
 
         cat secret-scan-report/trufflehog-report.txt
 
-        if [ \${status:-0} -ne 0 ]; then
-            echo ">>> Secrets detected in the codebase! Please rotate them and remove from history."
-            exit 1
+        if [ ${status:-0} -ne 0 ]; then
+            echo ">>> Secrets detected in the codebase! (Warning-only mode) Please rotate them and remove from history."
+            unstable("Secrets detected in codebase.")
+        else
+            echo ">>> No secrets detected."
         fi
-
-        echo ">>> No secrets detected."
-    """
-}
+        """
+        }

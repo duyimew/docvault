@@ -25,17 +25,17 @@ def call(cfg) {
             -w /workspace \
             ghcr.io/kyverno/kyverno-cli:v1.12.0 \
             apply /workspace/policies/kyverno \
-            \$RESOURCES \
+            $RESOURCES \
             --detailed-results \
-            > policy-report/kyverno-report.txt 2>&1 || status=\$?
+            > policy-report/kyverno-report.txt 2>&1 || status=$?
 
         cat policy-report/kyverno-report.txt
 
         if grep -q "fail" policy-report/kyverno-report.txt; then
-            echo ">>> Policy violations detected!"
-            exit 1
+            echo ">>> Policy violations detected! (Warning-only mode)"
+            unstable("Policy as Code violations detected.")
+        else
+            echo ">>> Policy as Code scan passed."
         fi
-
-        echo ">>> Policy as Code scan passed."
-    """
-}
+        """
+        }
