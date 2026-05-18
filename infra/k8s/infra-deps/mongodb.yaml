@@ -67,10 +67,6 @@ spec:
       volumes:
         - name: mongo-tmp
           emptyDir: {}
-<<<<<<< HEAD
-        - name: mongo-tmp
-          emptyDir: {}
-=======
   volumeClaimTemplates:
     - metadata:
         name: mongo-data
@@ -81,7 +77,6 @@ spec:
         resources:
           requests:
             storage: 10Gi
->>>>>>> upstream/gitops-testing
 ---
 apiVersion: v1
 kind: Service
