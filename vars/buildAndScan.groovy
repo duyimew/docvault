@@ -31,7 +31,7 @@ def call(cfg) {
         if (changed) {
             buildTargets << [
                 name: service,
-                repository: "${cfg.dockerOrg}/${service}",
+                repository: resolveRepository(cfg, service),
                 dockerfile: cfg.backendDockerfile,
                 buildArgs: [SERVICE_NAME: service],
             ]
@@ -44,7 +44,7 @@ def call(cfg) {
     if (webChanged) {
         buildTargets << [
             name: cfg.webAppName,
-            repository: "${cfg.dockerOrg}/${cfg.webImageName}",
+            repository: resolveRepository(cfg, cfg.webImageName),
             dockerfile: cfg.webDockerfile,
             buildArgs: [
                 NEXT_PUBLIC_APP_NAME: 'DocVault',
@@ -250,4 +250,11 @@ boolean isGlobalWebImpact(String path, cfg) {
         path == 'pnpm-lock.yaml' ||
         path == 'pnpm-workspace.yaml' ||
         path == 'turbo.json'
+}
+
+String resolveRepository(cfg, String service) {
+    if (cfg.registryHost?.trim()) {
+        return "${cfg.registryHost.trim()}/${cfg.dockerOrg}/${service}"
+    }
+    return "${cfg.dockerOrg}/${service}"
 }

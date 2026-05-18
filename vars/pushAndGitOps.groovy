@@ -32,7 +32,7 @@ def parseBuiltServices(builtServicesCsv) {
 }
 
 def pushImages(cfg, builtList, tag) {
-    echo '>>> Logging into Docker Hub...'
+    echo ">>> Logging into registry ${cfg.registryHost ?: 'Docker Hub'}..."
 
     def dockerConfigDir = sh(script: 'mktemp -d', returnStdout: true).trim()
     def imageDigests = [:]
@@ -40,17 +40,17 @@ def pushImages(cfg, builtList, tag) {
     try {
         withEnv(["DOCKER_CONFIG=${dockerConfigDir}"]) {
             withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin ${cfg.registryHost ?: ""}'
 
                 runPushesInBatches(cfg, builtList, tag)
 
                 builtList.each { service ->
                     def imageName = imageNameForService(cfg, service)
-                    def repository = "${cfg.dockerOrg}/${imageName}"
+                    def repository = resolveRepository(cfg, imageName)
                     imageDigests[service] = resolveImageDigest(repository, tag)
                 }
 
-                sh 'docker logout || true'
+                sh 'docker logout ${cfg.registryHost ?: ""} || true'
             }
         }
     } finally {
@@ -84,10 +84,10 @@ def runPushesInBatches(cfg, builtList, tag) {
 
 def pushImage(cfg, service, tag) {
     def imageName = imageNameForService(cfg, service)
-    def repository = "${cfg.dockerOrg}/${imageName}"
+    def repository = resolveRepository(cfg, imageName)
     def taggedImage = "${repository}:${tag}"
 
-    echo ">>> Pushing ${taggedImage} to Docker Hub..."
+    echo ">>> Pushing ${taggedImage} to registry..."
     sh "docker push ${taggedImage}"
     sh "docker push ${repository}:latest"
 }
@@ -98,6 +98,13 @@ def imageNameForService(cfg, service) {
 
 def valuesFileForService(cfg, service) {
     return service == cfg.webAppName ? 'web.yaml' : "${service}.yaml"
+}
+
+String resolveRepository(cfg, String service) {
+    if (cfg.registryHost?.trim()) {
+        return "${cfg.registryHost.trim()}/${cfg.dockerOrg}/${service}"
+    }
+    return "${cfg.dockerOrg}/${service}"
 }
 
 def resolveImageDigest(repository, tag) {

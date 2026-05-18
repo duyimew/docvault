@@ -1,4 +1,4 @@
-def call() {
+def call(cfg = [:]) {
     echo '>>> Running SCA Scan...'
     echo '>>> Security gate policy: Dependency Check fails on CVSS >= 7 unless a written exception is created.'
 
@@ -7,13 +7,18 @@ def call() {
         mkdir -p ${WORKSPACE}/var/jenkins_home/dependency-check-data
     '''
 
-    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-        sh '''
+    // Determine if we should attempt to use a credential
+    def useNvdKey = cfg.useNvdKey ?: false
+    def nvdKeyId = cfg.nvdApiKeyId ?: 'nvd-api-key'
+
+    def runScan = { apiKey ->
+        def nvdFlag = apiKey ? "--nvdApiKey \"${apiKey}\"" : ""
+        sh """
             set -eu
 
             docker run --rm \\
-                -v "$WORKSPACE:/src" \\
-                -v "$WORKSPACE/dependency-check-report:/report" \\
+                -v "\$WORKSPACE:/src" \\
+                -v "\$WORKSPACE/dependency-check-report:/report" \\
                 -v /var/jenkins_home/dependency-check-data:/usr/share/dependency-check/data \\
                 owasp/dependency-check:latest \\
                 --project "DocVault" \\
@@ -37,7 +42,21 @@ def call() {
                 --out /report \\
                 --failOnCVSS 7 \\
                 --disableKnownExploited \\
-                --nvdApiKey "$NVD_API_KEY"
-        '''
+                ${nvdFlag}
+        """
+    }
+
+    if (useNvdKey) {
+        try {
+            withCredentials([string(credentialsId: nvdKeyId, variable: 'NVD_API_KEY')]) {
+                runScan(NVD_API_KEY)
+            }
+        } catch (Exception e) {
+            echo "WARNING: Credential '${nvdKeyId}' not found or error accessing it. Running scan without API key (rate limits may apply)."
+            runScan(null)
+        }
+    } else {
+        echo ">>> Running scan without NVD API Key..."
+        runScan(null)
     }
 }

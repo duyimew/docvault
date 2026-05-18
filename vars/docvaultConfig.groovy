@@ -3,9 +3,11 @@ def call() {
     def sonarHostUrl = env.SONAR_HOST_URL?.trim() ? env.SONAR_HOST_URL.trim() : 'http://sonarqube:9000'
     def deployTargetUrl = env.DEPLOY_TARGET_URL?.trim() ? env.DEPLOY_TARGET_URL.trim() : ''
     def zapTarget = env.ZAP_TARGET?.trim() ? env.ZAP_TARGET.trim() : ''
+    def registryHost = env.REGISTRY_HOST?.trim() ? env.REGISTRY_HOST.trim() : ''
 
     return [
         agentLabel: 'docker-agent-alpine-ubuntu-vm',
+        registryHost: registryHost,
         nodeImage: 'node:20-alpine',
         trivyImage: 'aquasec/trivy:0.70.0',
         sonarScannerImage: 'sonarsource/sonar-scanner-cli:latest',

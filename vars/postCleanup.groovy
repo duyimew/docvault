@@ -5,6 +5,8 @@ def call() {
     archiveArtifacts artifacts: 'checkov-report/*.txt', allowEmptyArchive: true
     archiveArtifacts artifacts: 'zap-report/*.html', allowEmptyArchive: true
     archiveArtifacts artifacts: 'zap-report/*.json', allowEmptyArchive: true
+    archiveArtifacts artifacts: 'policy-report/*.txt', allowEmptyArchive: true
+    archiveArtifacts artifacts: 'secret-scan-report/*.txt', allowEmptyArchive: true
 
     echo '>>> Cleaning up workspace (Force-handling root files)...'
     sh 'docker run --rm -v ${WORKSPACE}:/mnt alpine sh -c "find /mnt -mindepth 1 -delete"'

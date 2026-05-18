@@ -61,6 +61,11 @@ pipeline {
             defaultValue: '',
             description: 'Reachable web base URL for ZAP baseline scan, for example http://<node-ip>:30006. Required only when RUN_ZAP=true.'
         )
+        booleanParam(
+            name: 'USE_NVD_KEY',
+            defaultValue: false,
+            description: 'Use NVD API key for Dependency Check to bypass rate limits (requires "nvd-api-key" credential).'
+        )
     }
 
     environment {
@@ -109,6 +114,8 @@ pipeline {
                         ? params.KUBECONFIG_CREDENTIAL_ID.trim()
                         : cfg.kubeconfigCredentialId
 
+                    cfg.useNvdKey = params.USE_NVD_KEY
+
                     echo ">>> Effective GitOps branch: ${cfg.gitOpsBranch}"
                     echo ">>> FORCE_BUILD_ALL=${params.FORCE_BUILD_ALL}"
                     echo ">>> DEPLOY_TARGET_URL=${cfg.deployTargetUrl ?: '(not set)'}"
@@ -152,7 +159,7 @@ pipeline {
                 stage('SCA - Dependency Check') {
                     steps {
                         script {
-                            dependencyCheck()
+                            dependencyCheck(cfg)
                         }
                     }
                 }
@@ -176,7 +183,24 @@ pipeline {
                 stage('SAST - SonarQube') {
                     steps {
                         script {
-                            sonarSast(cfg)
+                            // Enforce Quality Gate for P1.5
+                            sonarSast(cfg + [enforceQualityGate: true])
+                        }
+                    }
+                }
+
+                stage('Secret Scan') {
+                    steps {
+                        script {
+                            secretScan()
+                        }
+                    }
+                }
+
+                stage('Policy as Code') {
+                    steps {
+                        script {
+                            policyAsCode(cfg)
                         }
                     }
                 }
