@@ -1,0 +1,62 @@
+expose:
+  type: loadBalancer
+  tls:
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-tls
+  loadBalancer:
+    name: harbor
+    ports:
+      httpPort: 80
+      httpsPort: 443
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    sourceRanges: []
+
+externalURL: https://harbor.example.com
+
+persistence:
+  enabled: true
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 50Gi
+    jobservice:
+      jobLog:
+        storageClass: "docvault-gp3"
+        accessMode: ReadWriteOnce
+        size: 5Gi
+    database:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 10Gi
+    redis:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 5Gi
+    trivy:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 5Gi
+
+existingSecretAdminPassword: harbor-bootstrap-secrets
+existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+existingSecretSecretKey: harbor-bootstrap-secrets
+
+updateStrategy:
+  type: Recreate
+
+portal:
+  replicas: 1
+core:
+  replicas: 1
+jobservice:
+  replicas: 1
+registry:
+  replicas: 1
+trivy:
+  enabled: true
+  replicas: 1

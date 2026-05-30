@@ -1,0 +1,66 @@
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-tls
+  ingress:
+    hosts:
+      core: harbor.example.com
+    controller: default
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+
+externalURL: https://harbor.example.com
+
+persistence:
+  enabled: true
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 50Gi
+    jobservice:
+      jobLog:
+        storageClass: "docvault-gp3"
+        accessMode: ReadWriteOnce
+        size: 5Gi
+    database:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 10Gi
+    redis:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 5Gi
+    trivy:
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 5Gi
+
+existingSecretAdminPassword: harbor-bootstrap-secrets
+existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+existingSecretSecretKey: harbor-bootstrap-secrets
+
+updateStrategy:
+  type: Recreate
+
+portal:
+  replicas: 1
+core:
+  replicas: 1
+jobservice:
+  replicas: 1
+registry:
+  replicas: 1
+trivy:
+  enabled: true
+  replicas: 1
