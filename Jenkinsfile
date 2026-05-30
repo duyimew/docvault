@@ -17,6 +17,31 @@ pipeline {
             description: 'Rebuild and rescan all images regardless of detected file changes.'
         )
         string(
+            name: 'REGISTRY_HOST',
+            defaultValue: '',
+            description: 'Container registry host without protocol. Leave empty for Docker Hub; use Harbor host such as harbor.example.com.'
+        )
+        string(
+            name: 'REGISTRY_NAMESPACE',
+            defaultValue: '',
+            description: 'Registry namespace/project. For Harbor dev pushes use docvault-dev; for Docker Hub use the Docker Hub username/org.'
+        )
+        string(
+            name: 'REGISTRY_CREDENTIAL_ID',
+            defaultValue: 'dockerhub-credentials',
+            description: 'Jenkins username/password credential for docker login. For Harbor use the project robot account credential.'
+        )
+        booleanParam(
+            name: 'PUSH_LATEST',
+            defaultValue: false,
+            description: 'Also push the mutable latest tag. Keep false when Harbor tag immutability is enabled.'
+        )
+        booleanParam(
+            name: 'ENFORCE_SONAR_QG',
+            defaultValue: true,
+            description: 'Fail the pipeline when the SonarQube Quality Gate fails or times out.'
+        )
+        string(
             name: 'GITOPS_BRANCH',
             defaultValue: 'gitops-testing',
             description: 'GitOps branch used for Helm values tag updates (create this branch before enabling updates).'
@@ -92,6 +117,20 @@ pipeline {
                         ? params.GITOPS_BRANCH.trim()
                         : cfg.gitOpsBranch
 
+                    cfg.registryHost = params.REGISTRY_HOST?.trim()
+                        ? params.REGISTRY_HOST.trim()
+                        : cfg.registryHost
+
+                    cfg.registryNamespace = params.REGISTRY_NAMESPACE?.trim()
+                        ? params.REGISTRY_NAMESPACE.trim()
+                        : cfg.registryNamespace
+
+                    cfg.registryCredentialId = params.REGISTRY_CREDENTIAL_ID?.trim()
+                        ? params.REGISTRY_CREDENTIAL_ID.trim()
+                        : cfg.registryCredentialId
+
+                    cfg.pushLatest = params.PUSH_LATEST
+
                     cfg.deployTargetUrl = params.DEPLOY_TARGET_URL?.trim()
                         ? params.DEPLOY_TARGET_URL.trim()
                         : cfg.deployTargetUrl
@@ -117,6 +156,10 @@ pipeline {
                     cfg.useNvdKey = params.USE_NVD_KEY
 
                     echo ">>> Effective GitOps branch: ${cfg.gitOpsBranch}"
+                    echo ">>> Registry host: ${cfg.registryHost ?: '(Docker Hub default)'}"
+                    echo ">>> Registry namespace/project: ${cfg.registryNamespace}"
+                    echo ">>> Registry credential ID: ${cfg.registryCredentialId}"
+                    echo ">>> PUSH_LATEST=${params.PUSH_LATEST}"
                     echo ">>> FORCE_BUILD_ALL=${params.FORCE_BUILD_ALL}"
                     echo ">>> DEPLOY_TARGET_URL=${cfg.deployTargetUrl ?: '(not set)'}"
                     echo ">>> RUN_ARGO_HEALTH_CHECK=${params.RUN_ARGO_HEALTH_CHECK}"
@@ -183,8 +226,7 @@ pipeline {
                 stage('SAST - SonarQube') {
                     steps {
                         script {
-                            // Non-blocking for testing (warning-only mode)
-                            sonarSast(cfg + [enforceQualityGate: false])
+                            sonarSast(cfg + [enforceQualityGate: params.ENFORCE_SONAR_QG])
                         }
                     }
                 }

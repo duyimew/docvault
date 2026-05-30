@@ -3,6 +3,7 @@ def call() {
     archiveArtifacts artifacts: 'dependency-check-report/*.html', allowEmptyArchive: true
     archiveArtifacts artifacts: 'dependency-check-report/*.json', allowEmptyArchive: true
     archiveArtifacts artifacts: 'checkov-report/*.txt', allowEmptyArchive: true
+    archiveArtifacts artifacts: 'trivy-fs-report/*.json', allowEmptyArchive: true
     archiveArtifacts artifacts: 'zap-report/*.html', allowEmptyArchive: true
     archiveArtifacts artifacts: 'zap-report/*.json', allowEmptyArchive: true
     archiveArtifacts artifacts: 'policy-report/*.txt', allowEmptyArchive: true

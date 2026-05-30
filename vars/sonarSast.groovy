@@ -80,10 +80,8 @@ def call(Map cfg = [:]) {
 
     if (enforceQG) {
         echo '>>> Waiting for SonarQube Quality Gate...'
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-            timeout(time: qgTimeoutMinutes, unit: 'MINUTES') {
-                waitForQualityGate abortPipeline: true
-            }
+        timeout(time: qgTimeoutMinutes, unit: 'MINUTES') {
+            waitForQualityGate abortPipeline: true
         }
     }
 }

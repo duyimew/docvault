@@ -13,7 +13,6 @@ def call() {
 node_modules
 .turbo
 .next
-infra/k8s/infra-deps/harbor-values.yaml
 EOF
 
             echo ">>> Scanning repository for leaked secrets..."
@@ -39,9 +38,10 @@ EOF
 
     // 2. Evaluate the status in Groovy
     if (status != 0) {
-        echo ">>> Secrets detected in the codebase! (Warning-only mode) Please rotate them and remove from history."
-        unstable("Secrets detected in codebase.")
+        archiveArtifacts artifacts: 'secret-scan-report/trufflehog-report.txt', allowEmptyArchive: true
+        error("Secrets detected in codebase. Rotate them, remove them from Git history, or document a deliberate exception before rerunning.")
     } else {
+        archiveArtifacts artifacts: 'secret-scan-report/trufflehog-report.txt', allowEmptyArchive: true
         echo ">>> No secrets detected."
     }
 }

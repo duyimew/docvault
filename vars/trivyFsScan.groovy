@@ -4,6 +4,7 @@ def call(cfg) {
     sh """
         set -eu
 
+        mkdir -p trivy-fs-report
         scan_dir="\$(mktemp -d)"
         cleanup() {
             rm -rf "\$scan_dir"
@@ -33,6 +34,12 @@ def call(cfg) {
             --exclude='*/.terraform' \\
             --exclude='*/.terraform/*' \\
             -cf - -C '${env.WORKSPACE}' . | tar -xf - -C "\$scan_dir"
+
+        docker run --rm \\
+            -v "\$scan_dir:/src:ro" \\
+            -v "${env.WORKSPACE}/trivy-fs-report:/report" \\
+            ${cfg.trivyImage} \\
+            fs /src --scanners vuln,secret,misconfig --misconfig-scanners dockerfile,kubernetes,helm --severity HIGH,CRITICAL --format json --output /report/trivy-fs-report.json --exit-code 0 --no-progress
 
         docker run --rm \\
             -v "\$scan_dir:/src:ro" \\

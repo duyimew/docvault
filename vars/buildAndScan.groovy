@@ -253,8 +253,9 @@ boolean isGlobalWebImpact(String path, cfg) {
 }
 
 String resolveRepository(cfg, String service) {
+    def namespace = cfg.registryNamespace?.trim() ? cfg.registryNamespace.trim() : cfg.dockerOrg
     if (cfg.registryHost?.trim()) {
-        return "${cfg.registryHost.trim()}/${cfg.dockerOrg}/${service}"
+        return "${cfg.registryHost.trim()}/${namespace}/${service}"
     }
-    return "${cfg.dockerOrg}/${service}"
+    return "${namespace}/${service}"
 }

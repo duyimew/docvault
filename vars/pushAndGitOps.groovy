@@ -36,11 +36,13 @@ def pushImages(cfg, builtList, tag) {
 
     def dockerConfigDir = sh(script: 'mktemp -d', returnStdout: true).trim()
     def imageDigests = [:]
+    def registryArg = cfg.registryHost?.trim() ? shellQuote(cfg.registryHost.trim()) : ''
+    def credentialId = cfg.registryCredentialId ?: 'dockerhub-credentials'
 
     try {
         withEnv(["DOCKER_CONFIG=${dockerConfigDir}"]) {
-            withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin ${cfg.registryHost ?: ""}'
+            withCredentials([usernamePassword(credentialsId: credentialId, passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                sh "echo \"\$DOCKER_PASS\" | docker login -u \"\$DOCKER_USER\" --password-stdin ${registryArg}"
 
                 runPushesInBatches(cfg, builtList, tag)
 
@@ -50,7 +52,7 @@ def pushImages(cfg, builtList, tag) {
                     imageDigests[service] = resolveImageDigest(repository, tag)
                 }
 
-                sh 'docker logout ${cfg.registryHost ?: ""} || true'
+                sh "docker logout ${registryArg} || true"
             }
         }
     } finally {
@@ -89,7 +91,11 @@ def pushImage(cfg, service, tag) {
 
     echo ">>> Pushing ${taggedImage} to registry..."
     sh "docker push ${taggedImage}"
-    sh "docker push ${repository}:latest"
+    if (cfg.pushLatest) {
+        sh "docker push ${repository}:latest"
+    } else {
+        echo ">>> Skipping mutable latest push for ${repository}; PUSH_LATEST=false."
+    }
 }
 
 def imageNameForService(cfg, service) {
@@ -101,10 +107,11 @@ def valuesFileForService(cfg, service) {
 }
 
 String resolveRepository(cfg, String service) {
+    def namespace = cfg.registryNamespace?.trim() ? cfg.registryNamespace.trim() : cfg.dockerOrg
     if (cfg.registryHost?.trim()) {
-        return "${cfg.registryHost.trim()}/${cfg.dockerOrg}/${service}"
+        return "${cfg.registryHost.trim()}/${namespace}/${service}"
     }
-    return "${cfg.dockerOrg}/${service}"
+    return "${namespace}/${service}"
 }
 
 def resolveImageDigest(repository, tag) {
@@ -176,10 +183,13 @@ EOF
                     def fileName = valuesFileForService(cfg, service)
                     def valuesFile = "${gitOpsWorktree}/${cfg.helmValuesDir}/${fileName}"
                     def digest = imageDigests[service] ?: ''
+                    def imageName = imageNameForService(cfg, service)
+                    def repository = resolveRepository(cfg, imageName)
 
                     sh """
                         set -eu
                         test -f '${valuesFile}'
+                        sed -i -E 's#^([[:space:]]*)repository:.*#\\1repository: \"${repository}\"#' '${valuesFile}'
                         sed -i -E 's/^([[:space:]]*)tag:.*/\\1tag: \"${tag}\"/' '${valuesFile}'
                         sed -i -E 's/^([[:space:]]*)digest:.*/\\1digest: \"${digest}\"/' '${valuesFile}'
                     """
@@ -331,4 +341,8 @@ def pushWithRetry(gitOpsWorktree, targetBranch) {
     if (!pushed) {
         error("Failed to push GitOps update to branch '${targetBranch}' after 3 attempts.")
     }
+}
+
+String shellQuote(String value) {
+    return "'${value.replace("'", "'\"'\"'")}'"
 }

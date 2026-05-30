@@ -4,12 +4,26 @@ def call() {
     def deployTargetUrl = env.DEPLOY_TARGET_URL?.trim() ? env.DEPLOY_TARGET_URL.trim() : ''
     def zapTarget = env.ZAP_TARGET?.trim() ? env.ZAP_TARGET.trim() : ''
     def registryHost = env.REGISTRY_HOST?.trim() ? env.REGISTRY_HOST.trim() : ''
+    def registryNamespace = env.REGISTRY_NAMESPACE?.trim()
+        ? env.REGISTRY_NAMESPACE.trim()
+        : (registryHost ? 'docvault-dev' : 'daithang59')
+    def registryCredentialId = env.REGISTRY_CREDENTIAL_ID?.trim()
+        ? env.REGISTRY_CREDENTIAL_ID.trim()
+        : 'dockerhub-credentials'
+    def pushLatest = env.PUSH_LATEST?.trim()
+        ? env.PUSH_LATEST.equalsIgnoreCase('true')
+        : false
 
     return [
         agentLabel: 'docker-agent-alpine-ubuntu-vm',
         registryHost: registryHost,
+        registryNamespace: registryNamespace,
+        registryCredentialId: registryCredentialId,
+        pushLatest: pushLatest,
         nodeImage: 'node:20-alpine',
         trivyImage: 'aquasec/trivy:0.70.0',
+        kyvernoImage: 'ghcr.io/kyverno/kyverno-cli:v1.12.0',
+        helmImage: 'alpine/helm:3.16.4',
         sonarScannerImage: 'sonarsource/sonar-scanner-cli:latest',
         sonarQubeInstallation: 'sqdocvault',
         sonarProjectKey: 'docvault',

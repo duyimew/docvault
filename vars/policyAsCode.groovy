@@ -1,14 +1,27 @@
 def call(cfg) {
     echo '>>> Running Policy as Code Scan (Kyverno CLI)...'
-    
-    // 1. Run the scan and save result to report
-    sh """
+
+    def status = sh(
+        script: """
         set -eu
         mkdir -p policy-report
+        mkdir -p policy-rendered
 
-        echo ">>> Scanning infra/k8s/infra-deps against Kyverno policies..."
+        echo ">>> Rendering DocVault Helm values for policy checks..."
+        for f in infra/k8s/values/*.yaml; do
+            name="\$(basename "\$f" .yaml)"
+            docker run --rm \\
+                -v ${env.WORKSPACE}:/workspace \\
+                -w /workspace \\
+                ${cfg.helmImage ?: 'alpine/helm:3.16.4'} \\
+                template "docvault-\$name" infra/k8s/charts/docvault-service \\
+                -n docvault \\
+                -f "\$f" \\
+                > "policy-rendered/\$name.yaml"
+        done
 
-        # Filter for actual Kubernetes manifests (files containing 'kind:') to avoid parsing errors on values files
+        echo ">>> Scanning infra/k8s manifests and rendered Helm output against Kyverno policies..."
+
         RESOURCES=""
         for f in infra/k8s/infra-deps/*.yaml; do
             if grep -q "kind:" "\$f"; then
@@ -16,32 +29,39 @@ def call(cfg) {
             fi
         done
 
+        for f in policy-rendered/*.yaml; do
+            if grep -q "kind:" "\$f"; then
+                RESOURCES="\$RESOURCES --resource /workspace/\$f"
+            fi
+        done
+
         if [ -z "\$RESOURCES" ]; then
-            echo "No valid Kubernetes manifests found in infra/k8s/infra-deps. Skipping scan."
+            echo "No valid Kubernetes manifests found. Skipping scan."
             exit 0
         fi
 
-        # Use kyverno apply to check policies against resources
-        # Use set +e or || true so the shell doesn't exit on Kyverno failure
         set +e
-        docker run --rm \
+        docker run --rm \\
             -v ${env.WORKSPACE}:/workspace \
             -w /workspace \
-            ghcr.io/kyverno/kyverno-cli:v1.12.0 \
+            ${cfg.kyvernoImage ?: 'ghcr.io/kyverno/kyverno-cli:v1.12.0'} \
             apply /workspace/policies/kyverno \
             \$RESOURCES \
             --detailed-results \
             > policy-report/kyverno-report.txt 2>&1
+        status=\$?
         set -e
 
         cat policy-report/kyverno-report.txt
-    """
+        exit "\$status"
+        """,
+        returnStatus: true
+    )
 
-    // 2. Check the report file for failures using Groovy
-    def report = readFile('policy-report/kyverno-report.txt')
-    if (report.contains('fail')) {
-        echo ">>> Policy violations detected! (Warning-only mode)"
-        unstable("Policy as Code violations detected.")
+    archiveArtifacts artifacts: 'policy-report/kyverno-report.txt,policy-rendered/*.yaml', allowEmptyArchive: true
+
+    if (status != 0) {
+        error("Policy as Code violations detected.")
     } else {
         echo ">>> Policy as Code scan passed."
     }
