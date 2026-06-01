@@ -1,32 +1,50 @@
+# Deprecated demo values. Prefer infra/k8s/harbor/values-eks.yaml for EKS.
+#
+# This file is kept only so older notes that reference infra/k8s/infra-deps
+# do not break. Do not place real Harbor passwords or secret keys in Git.
+
 expose:
-  type: nodePort
+  type: loadBalancer
   tls:
-    enabled: false
-externalURL: http://harbor.local:30002
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-tls
+
+externalURL: https://harbor.example.com
 
 persistence:
   enabled: true
   resourcePolicy: "keep"
   persistentVolumeClaim:
     registry:
-      storageClass: "local-path"
+      storageClass: "docvault-gp3"
+      accessMode: ReadWriteOnce
+      size: 50Gi
+    jobservice:
+      jobLog:
+        storageClass: "docvault-gp3"
+        accessMode: ReadWriteOnce
+        size: 5Gi
+    database:
+      storageClass: "docvault-gp3"
       accessMode: ReadWriteOnce
       size: 10Gi
-    jobservice:
-      storageClass: "local-path"
-      accessMode: ReadWriteOnce
-      size: 1Gi
-    database:
-      storageClass: "local-path"
-      accessMode: ReadWriteOnce
-      size: 1Gi
     redis:
-      storageClass: "local-path"
+      storageClass: "docvault-gp3"
       accessMode: ReadWriteOnce
-      size: 1Gi
+      size: 5Gi
     trivy:
-      storageClass: "local-path"
+      storageClass: "docvault-gp3"
       accessMode: ReadWriteOnce
       size: 5Gi
 
-harborAdminPassword: Harbor12345
+existingSecretAdminPassword: harbor-bootstrap-secrets
+existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+existingSecretSecretKey: harbor-bootstrap-secrets
+
+updateStrategy:
+  type: Recreate
+
+trivy:
+  enabled: true
