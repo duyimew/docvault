@@ -1,7 +1,28 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: minio-secret
+  namespace: docvault
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: SecretStore
+  target:
+    name: minio-secret
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - extract:
+        key: /docvault/testing/minio
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: minio
+  namespace: docvault
   annotations:
     argocd.argoproj.io/sync-wave: "0"
   labels:
@@ -32,6 +53,9 @@ spec:
           image: minio/minio:RELEASE.2025-01-20T14-49-07Z
           args: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
@@ -42,14 +66,27 @@ spec:
             - containerPort: 9001
           env:
             - name: MINIO_ROOT_USER
-              value: "minioadmin"
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_USER
             - name: MINIO_ROOT_PASSWORD
-              value: "minioadminpw"
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_PASSWORD
           volumeMounts:
             - name: minio-data
               mountPath: /data
             - name: tmp
               mountPath: /tmp
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
       volumes:
         - name: tmp
           emptyDir: {}
@@ -68,6 +105,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: minio
+  namespace: docvault
 spec:
   selector:
     app: minio

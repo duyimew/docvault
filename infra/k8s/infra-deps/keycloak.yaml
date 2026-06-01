@@ -1,7 +1,28 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: keycloak-secret
+  namespace: docvault
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: SecretStore
+  target:
+    name: keycloak-secret
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - extract:
+        key: /docvault/testing/keycloak
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak
+  namespace: docvault
 spec:
   replicas: 1
   selector:
@@ -24,8 +45,11 @@ spec:
           image: quay.io/keycloak/keycloak:26.0
           args: ["start-dev", "--import-realm"]
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false
             capabilities:
               drop:
                 - ALL
@@ -33,9 +57,15 @@ spec:
             - containerPort: 8080
           env:
             - name: KEYCLOAK_ADMIN
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KEYCLOAK_ADMIN
             - name: KEYCLOAK_ADMIN_PASSWORD
-              value: "adminpw"
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KEYCLOAK_ADMIN_PASSWORD
             - name: KC_HTTP_ENABLED
               value: "true"
             - name: KC_HOSTNAME_STRICT
@@ -48,6 +78,13 @@ spec:
               subPath: realm-docvault.json
             - name: kc-tmp
               mountPath: /tmp
+          resources:
+            limits:
+              cpu: 500m
+              memory: 768Mi
+            requests:
+              cpu: 200m
+              memory: 384Mi
       volumes:
         - name: kc-data
           emptyDir: {}
@@ -61,6 +98,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: keycloak
+  namespace: docvault
 spec:
   type: NodePort
   selector:

@@ -47,3 +47,8 @@ output "node_group_autoscaling_group_names" {
   description = "Underlying Auto Scaling Group names for the managed node group."
   value       = module.eks.eks_managed_node_groups["docvault"].node_group_autoscaling_group_names
 }
+
+output "external_secrets_role_arn" {
+  description = "IAM role ARN for the External Secrets Operator service account."
+  value       = aws_iam_role.external_secrets.arn
+}

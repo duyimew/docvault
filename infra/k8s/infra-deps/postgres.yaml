@@ -1,17 +1,28 @@
-apiVersion: v1
-kind: Secret
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: postgres-secret
-type: Opaque
-stringData:
-  POSTGRES_USER: docvault
-  POSTGRES_PASSWORD: docvaultpw
-  POSTGRES_DB: docvault_metadata
+  namespace: docvault
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: SecretStore
+  target:
+    name: postgres-secret
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - extract:
+        key: /docvault/testing/postgres
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-init-sql
+  namespace: docvault
 data:
   init.sql: |
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -36,6 +47,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: db
+  namespace: docvault
   annotations:
     argocd.argoproj.io/sync-wave: "0"
   labels:
@@ -65,6 +77,9 @@ spec:
         - name: postgres
           image: postgres:16-alpine
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
@@ -100,6 +115,13 @@ spec:
               mountPath: /tmp
             - name: postgres-run
               mountPath: /var/run/postgresql
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
       volumes:
         - name: postgres-init
           configMap:
@@ -123,6 +145,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: db
+  namespace: docvault
 spec:
   selector:
     app: db

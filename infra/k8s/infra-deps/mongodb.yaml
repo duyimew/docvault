@@ -1,16 +1,28 @@
-apiVersion: v1
-kind: Secret
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: mongodb-secret
-type: Opaque
-stringData:
-  MONGO_INITDB_ROOT_USERNAME: root
-  MONGO_INITDB_ROOT_PASSWORD: rootpw
+  namespace: docvault
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: SecretStore
+  target:
+    name: mongodb-secret
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - extract:
+        key: /docvault/testing/mongodb
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongo
+  namespace: docvault
   annotations:
     argocd.argoproj.io/sync-wave: "0"
   labels:
@@ -40,6 +52,9 @@ spec:
         - name: mongodb
           image: mongo:7
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
@@ -63,6 +78,13 @@ spec:
               mountPath: /data/db
             - name: mongo-tmp
               mountPath: /tmp
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
       volumes:
         - name: mongo-tmp
           emptyDir: {}
@@ -81,6 +103,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mongo
+  namespace: docvault
 spec:
   selector:
     app: mongo
