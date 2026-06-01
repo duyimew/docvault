@@ -19,6 +19,10 @@ spec:
         app: {{ .Release.Name }}
     spec:
       automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -31,6 +35,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}{{- if and $imageDigest (ne $imageDigest $zeroDigest) }}@{{ $imageDigest }}{{- end }}"
           imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
