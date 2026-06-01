@@ -154,6 +154,7 @@ vite.config.ts.timestamp-*
 !*.tfvars.example
 tfplan
 *.tfplan
+infra/terraform/aws-eks/*-secret.json
 crash.log
 crash.*.log
 
