@@ -442,3 +442,59 @@ Nội dung:
 - Khi pipeline ổn, việc triển khai và demo Web App security sẽ đáng tin hơn.
 
 Tuy nhiên, nhóm không nên để toàn bộ Web App P0 đến quá muộn. Ít nhất cần chốt sớm policy preview của `compliance_officer`, audit trust boundary và secret/key rotation vì đây là các điểm nếu làm muộn sẽ ảnh hưởng trực tiếp tới demo bảo mật cuối cùng.
+
+---
+
+# Review P1.3-P1.5 ngay 2026-05-25
+
+Trang thai hien tai: P1.3, P1.4, P1.5 da co nen tang tot, nhung can siet them de thanh milestone co the bao ve truoc hoi dong.
+
+## P1.3 - Harbor private registry va promotion
+
+Diem da co:
+
+- Pipeline da co bien registry de doi repository tu Docker Hub sang registry rieng.
+- Jenkins ghi image `tag` va `digest` vao Helm values.
+- Repo da co file values Harbor cho EKS tai `infra/k8s/harbor/values-eks.yaml`.
+
+Can cai thien:
+
+- Khong dung HTTP Harbor tren EKS neu muon node pull image on dinh. Can chot DNS + HTTPS truoc.
+- Harbor project nen tach ro `docvault-dev` va `docvault-prod`.
+- Robot account Jenkins chi nen push/pull trong `docvault-dev`; promotion sang prod nen dung credential rieng.
+- Khong push `latest` theo mac dinh nua vi no mau thuan voi immutable tag va digest-based deploy.
+- Can them buoc promotion dev -> prod bang digest, khong rebuild image cho prod.
+- Can them `imagePullSecrets` vao tung values file khi Harbor project private.
+
+## P1.4 - Policy as Code gate
+
+Diem da co:
+
+- Da co thu muc `policies/kyverno`.
+- Da co policy cam `latest`, bat resources, va bat non-root.
+- Jenkins da co stage `Policy as Code`.
+
+Can cai thien:
+
+- Stage policy phai fail build that, khong chi `UNSTABLE`.
+- Can scan ca Helm chart da render, khong chi raw manifest trong `infra/k8s/infra-deps`.
+- Can bo sung policy cam privileged container.
+- Can bo sung policy chi cho image tu Harbor/Nexus sau khi chot Harbor hostname.
+- Can xu ly plaintext Kubernetes Secret trong GitOps path. Hien tai infra demo van co Secret plaintext, nen nen chuyen sang External Secrets/SOPS/SealedSecrets hoac ghi ro exception demo.
+- Can archive Kyverno report va rendered manifest lam evidence.
+
+## P1.5 - Siet CI security gates
+
+Diem da co:
+
+- Trivy FS da fail voi HIGH/CRITICAL.
+- Dependency Check da dung `--failOnCVSS 7`.
+- Checkov dang fail pipeline.
+- ZAP dang optional va chi nen bat khi target reachable.
+
+Can cai thien:
+
+- Sonar Quality Gate phai co che do fail pipeline khi da cau hinh webhook/token dung.
+- Secret scan phai fail build khi phat hien secret that, khong chi warning.
+- Tat ca report can archive: Dependency Check, Trivy, Checkov, Kyverno, TruffleHog, ZAP.
+- Can tao evidence fail/pass co chu dich: commit loi `latest`, missing resources, secret plaintext, Terraform open port; sau do commit fix.

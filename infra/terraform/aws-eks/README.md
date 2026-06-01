@@ -42,3 +42,50 @@ aws eks describe-cluster-versions --region ap-southeast-1
 ```
 
 Do not commit `terraform.tfvars`, local state, or plan files.
+
+## AWS credentials on Windows
+
+If `terraform plan` fails with:
+
+```text
+Error: No valid credential sources found
+failed to refresh cached credentials, no EC2 IMDS role found
+```
+
+Terraform cannot find AWS credentials in your local shell. The EC2 metadata error is only the provider's final fallback; it does not mean you need EC2.
+
+Use one of these local authentication methods.
+
+### Option A: IAM access key profile
+
+```powershell
+aws configure --profile docvault
+$env:AWS_PROFILE = "docvault"
+$env:AWS_REGION = "ap-southeast-1"
+aws sts get-caller-identity
+terraform plan -out tfplan
+```
+
+### Option B: AWS IAM Identity Center / SSO profile
+
+```powershell
+aws configure sso --profile docvault-sso
+aws sso login --profile docvault-sso
+$env:AWS_PROFILE = "docvault-sso"
+$env:AWS_REGION = "ap-southeast-1"
+aws sts get-caller-identity
+terraform plan -out tfplan
+```
+
+### Option C: temporary session credentials
+
+```powershell
+$env:AWS_ACCESS_KEY_ID = "<access-key-id>"
+$env:AWS_SECRET_ACCESS_KEY = "<secret-access-key>"
+$env:AWS_SESSION_TOKEN = "<session-token-if-any>"
+$env:AWS_REGION = "ap-southeast-1"
+aws sts get-caller-identity
+terraform plan -out tfplan
+```
+
+Never commit credentials or write them into Terraform files. Prefer `AWS_PROFILE` for repeatable local work.
