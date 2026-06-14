@@ -61,6 +61,59 @@ terraform output -raw jenkins_agent_ssh_private_key_pem > jenkins-agent-key.pem
 chmod 600 jenkins-agent-key.pem
 ```
 
+## Optional: Store the Agent SSH Key in AWS Secrets Manager
+
+If the local Jenkins controller uses the Jenkins AWS Secrets Manager Credentials
+Provider plugin, store the private key in Secrets Manager instead of pasting it
+directly into Jenkins.
+
+From PowerShell on your workstation:
+
+```powershell
+aws secretsmanager create-secret `
+  --region ap-southeast-1 `
+  --name aws-jenkins-agent-ssh `
+  --description "SSH private key for Jenkins controller to connect to the DocVault AWS agent" `
+  --secret-string file://jenkins-agent-key.pem `
+  --tags `
+    Key=jenkins:credentials:type,Value=sshUserPrivateKey `
+    Key=jenkins:credentials:username,Value=jenkins
+```
+
+If the secret already exists, update the value and tags:
+
+```powershell
+aws secretsmanager put-secret-value `
+  --region ap-southeast-1 `
+  --secret-id aws-jenkins-agent-ssh `
+  --secret-string file://jenkins-agent-key.pem
+
+aws secretsmanager tag-resource `
+  --region ap-southeast-1 `
+  --secret-id aws-jenkins-agent-ssh `
+  --tags `
+    Key=jenkins:credentials:type,Value=sshUserPrivateKey `
+    Key=jenkins:credentials:username,Value=jenkins
+```
+
+Then grant the local Jenkins controller AWS role permission to read only that
+secret by setting these variables in `terraform.tfvars`:
+
+```hcl
+jenkins_agent_ssh_secret_name              = "aws-jenkins-agent-ssh"
+jenkins_controller_secret_reader_role_name = "docvault-jenkins-secretsmanager-read"
+```
+
+Apply the Terraform change:
+
+```bash
+terraform plan -out tfplan
+terraform apply tfplan
+```
+
+Jenkins should then use the discovered credential named
+`aws-jenkins-agent-ssh` when configuring the SSH launcher.
+
 ## Configure the Local Jenkins Controller
 
 In your local Jenkins UI:

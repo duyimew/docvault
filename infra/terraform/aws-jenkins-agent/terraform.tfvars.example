@@ -31,3 +31,9 @@ create_network = true
 # create_network = false
 # vpc_id         = "vpc-xxxxxxxx"
 # subnet_id      = "subnet-xxxxxxxx"
+
+# Optional: allow the local Jenkins controller role to read the Jenkins agent
+# SSH private key from AWS Secrets Manager via the Jenkins AWS Secrets Manager
+# Credentials Provider plugin.
+# jenkins_agent_ssh_secret_name                 = "aws-jenkins-agent-ssh"
+# jenkins_controller_secret_reader_role_name    = "docvault-jenkins-secretsmanager-read"

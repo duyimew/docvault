@@ -2,6 +2,8 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_caller_identity" "current" {}
+
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
@@ -104,6 +106,41 @@ resource "aws_iam_instance_profile" "ssm" {
   tags = merge(local.tags, {
     Name = "${local.name}-ssm"
   })
+}
+
+data "aws_iam_policy_document" "jenkins_controller_read_agent_ssh_secret" {
+  count = var.jenkins_controller_secret_reader_role_name != null ? 1 : 0
+
+  statement {
+    sid = "ReadJenkinsAgentSshSecret"
+
+    actions = [
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetSecretValue",
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.jenkins_agent_ssh_secret_name}-*",
+    ]
+  }
+
+  statement {
+    sid = "ListSecretsForJenkinsPlugin"
+
+    actions = [
+      "secretsmanager:ListSecrets",
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "jenkins_controller_read_agent_ssh_secret" {
+  count = var.jenkins_controller_secret_reader_role_name != null ? 1 : 0
+
+  name   = "${local.name}-read-agent-ssh-secret"
+  role   = var.jenkins_controller_secret_reader_role_name
+  policy = data.aws_iam_policy_document.jenkins_controller_read_agent_ssh_secret[0].json
 }
 
 resource "aws_vpc" "this" {

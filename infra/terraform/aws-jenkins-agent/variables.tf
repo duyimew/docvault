@@ -112,6 +112,18 @@ variable "jenkins_agent_public_key" {
   default     = null
 }
 
+variable "jenkins_agent_ssh_secret_name" {
+  description = "AWS Secrets Manager secret name that stores the Jenkins agent SSH private key for the local Jenkins controller."
+  type        = string
+  default     = "aws-jenkins-agent-ssh"
+}
+
+variable "jenkins_controller_secret_reader_role_name" {
+  description = "Optional IAM role name used by the local Jenkins controller to read the Jenkins agent SSH private key from Secrets Manager. When set, this stack grants least-privilege read access to jenkins_agent_ssh_secret_name."
+  type        = string
+  default     = null
+}
+
 variable "jenkins_agent_workspace" {
   description = "Remote root directory configured for the Jenkins permanent agent."
   type        = string
