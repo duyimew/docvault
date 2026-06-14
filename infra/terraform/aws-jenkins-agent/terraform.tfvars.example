@@ -1,0 +1,33 @@
+aws_region  = "ap-southeast-1"
+environment = "testing"
+
+# These are the public egress IPs/ranges of your local Jenkins controller VM.
+# Use /32 for exact observed IPs or /24 if your ISP rotates within a small range.
+controller_cidr_blocks = [
+  "14.169.77.199/32",
+  "14.186.86.90/32",
+  "14.186.86.152/32",
+  "14.169.70.137/32",
+  "14.169.22.156/32",
+]
+
+# Optional extra admin SSH CIDRs. Leave empty if controller_cidr_blocks also
+# covers your laptop/VMware host.
+admin_cidr_blocks = []
+
+# Optional existing EC2 key pair for admin SSH as ubuntu. If omitted, Terraform
+# creates one and exposes the private key as a sensitive output.
+# ssh_key_name = "my-ec2-keypair"
+
+agent_instance_type      = "t3.large"
+agent_root_volume_size   = 80
+create_agent_eip         = true
+create_ssm_instance_profile = true
+
+# Default creates a small public VPC/subnet just for the agent.
+create_network = true
+
+# To reuse an existing VPC/subnet instead:
+# create_network = false
+# vpc_id         = "vpc-xxxxxxxx"
+# subnet_id      = "subnet-xxxxxxxx"

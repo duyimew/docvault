@@ -80,6 +80,17 @@ venv/
 .env.*
 !.env.example
 
+# Terraform local state and machine-specific inputs
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+tfplan
+*.tfplan
+jenkins-agent-key.pem
+docvault-jenkins-admin.pem
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

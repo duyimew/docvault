@@ -1,0 +1,43 @@
+aws_region  = "ap-southeast-1"
+environment = "testing"
+
+# If your public IP is stable, restrict both UI and SSH:
+# admin_cidr_blocks = ["203.0.113.10/32"]
+
+# If your public IP changes often, prefer SSM and do not expose SSH/Jenkins UI.
+# Use `terraform output -raw controller_ssm_port_forward_command` to reach
+# Jenkins at http://127.0.0.1:8080.
+admin_cidr_blocks           = []
+jenkins_ui_cidr_blocks      = []
+admin_ssh_cidr_blocks       = []
+create_ssm_instance_profile = true
+
+# Optional existing EC2 key pair for admin SSH as ubuntu. If omitted, Terraform
+# creates one and exposes the private key as a sensitive output.
+# ssh_key_name = "my-ec2-keypair"
+
+controller_instance_type = "t3.medium"
+agent_instance_type      = "t3.large"
+
+controller_root_volume_size = 50
+agent_root_volume_size      = 80
+
+# Default creates a small public VPC/subnet just for Jenkins.
+create_network = true
+
+# To reuse an existing VPC/subnet instead:
+# create_network = false
+# vpc_id         = "vpc-xxxxxxxx"
+# subnet_id      = "subnet-xxxxxxxx"
+
+# Keep true for a stable controller URL.
+create_controller_eip = true
+
+# Keep true so EKS API/NodePort allowlists can use a stable Jenkins agent IP.
+create_agent_eip = true
+
+# Optional: publish Jenkins UI through a Cloudflare Tunnel connector.
+# Create a Cloudflare Tunnel in Zero Trust, add a public hostname that routes to
+# http://localhost:8080, then paste the connector token here.
+# Prefer setting this with TF_VAR_cloudflared_tunnel_token instead of committing it.
+# cloudflared_tunnel_token = "eyJhIjoi..."

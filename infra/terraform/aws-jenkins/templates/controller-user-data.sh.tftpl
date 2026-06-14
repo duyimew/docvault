@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euxo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y --no-install-recommends \
+  ca-certificates \
+  curl \
+  fontconfig \
+  git \
+  gnupg \
+  lsb-release \
+  openjdk-21-jre \
+  unzip
+
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key -o /etc/apt/keyrings/jenkins-keyring.asc
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" > /etc/apt/sources.list.d/jenkins.list
+
+apt-get update
+apt-get install -y --no-install-recommends jenkins
+
+systemctl enable jenkins
+systemctl restart jenkins
+
+%{ if cloudflared_tunnel_token != "" ~}
+install -m 0755 -d /usr/share/keyrings
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg -o /usr/share/keyrings/cloudflare-main.gpg
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" > /etc/apt/sources.list.d/cloudflared.list
+
+apt-get update
+apt-get install -y --no-install-recommends cloudflared
+
+set +x
+cat > /root/cloudflared-tunnel-token <<'EOF'
+${cloudflared_tunnel_token}
+EOF
+chmod 0600 /root/cloudflared-tunnel-token
+cloudflared service install "$(cat /root/cloudflared-tunnel-token)"
+rm -f /root/cloudflared-tunnel-token
+set -x
+
+systemctl enable cloudflared
+systemctl restart cloudflared
+%{ endif ~}
