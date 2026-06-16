@@ -1,4 +1,4 @@
-@Library('docvault@feat/main') _
+@Library('docvault@main') _
 
 def cfg = [:]
 
