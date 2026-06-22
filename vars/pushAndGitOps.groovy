@@ -60,12 +60,14 @@ def pushImages(cfg, builtList, tag) {
 
                 withCredentials([string(credentialsId: credentialId, variable: 'DOCKER_PASS')]) {
                     sh "printf '%s' \"\$DOCKER_PASS\" | docker login -u ${shellQuote(registryUsername)} --password-stdin ${registryArg}"
+                    sh "chmod 755 '${dockerConfigDir}' && chmod 644 '${dockerConfigDir}/config.json' || true"
                     pushBuiltImagesAndResolveDigests(cfg, builtList, tag, imageDigests)
                     sh "docker logout ${registryArg} || true"
                 }
             } else if (credentialType == 'usernamePassword') {
                 withCredentials([usernamePassword(credentialsId: credentialId, passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
                     sh "printf '%s' \"\$DOCKER_PASS\" | docker login -u \"\$DOCKER_USER\" --password-stdin ${registryArg}"
+                    sh "chmod 755 '${dockerConfigDir}' && chmod 644 '${dockerConfigDir}/config.json' || true"
                     pushBuiltImagesAndResolveDigests(cfg, builtList, tag, imageDigests)
                     sh "docker logout ${registryArg} || true"
                 }
@@ -187,6 +189,9 @@ void signImageDigest(cfg, String service, String imageRef) {
     def signTlogFlag = tlogUpload ? '--tlog-upload=true' : '--tlog-upload=false'
     def verifyTlogFlag = tlogUpload ? '' : '--insecure-ignore-tlog=true'
 
+    def sbomFile = "${env.WORKSPACE}/sbom-${service}.json"
+    def hasSbom = fileExists(sbomFile)
+
     echo ">>> Signing ${service} image digest with cosign: ${imageRef}"
 
     withCredentials([
@@ -194,19 +199,29 @@ void signImageDigest(cfg, String service, String imageRef) {
         string(credentialsId: passwordCredentialId, variable: 'COSIGN_PASSWORD')
     ]) {
         withEnv([
-            "COSIGN_IMAGE=${cosignImage}",
             "COSIGN_IMAGE_REF=${imageRef}",
             "COSIGN_TLOG_FLAG=${signTlogFlag}"
         ]) {
             sh '''
                 set -eu
-                docker run --rm \
-                    -e COSIGN_PASSWORD \
-                    -e COSIGN_PRIVATE_KEY \
-                    -e DOCKER_CONFIG=/docker-config \
-                    -v "${DOCKER_CONFIG}:/docker-config:ro" \
-                    "${COSIGN_IMAGE}" sign --yes ${COSIGN_TLOG_FLAG} --key env://COSIGN_PRIVATE_KEY "${COSIGN_IMAGE_REF}"
+                cosign sign --yes ${COSIGN_TLOG_FLAG} --key env://COSIGN_PRIVATE_KEY "${COSIGN_IMAGE_REF}"
             '''
+        }
+
+        if (hasSbom) {
+            echo ">>> Attesting and signing SBOM for ${service}..."
+            withEnv([
+                "COSIGN_IMAGE_REF=${imageRef}",
+                "COSIGN_TLOG_FLAG=${signTlogFlag}",
+                "SBOM_FILE=${sbomFile}"
+            ]) {
+                sh '''
+                    set -eu
+                    cosign attest --yes ${COSIGN_TLOG_FLAG} --key env://COSIGN_PRIVATE_KEY --type spdxjson --predicate "${SBOM_FILE}" "${COSIGN_IMAGE_REF}"
+                '''
+            }
+        } else {
+            echo ">>> SBOM file not found at ${sbomFile}; skipping SBOM attestation."
         }
     }
 
@@ -218,18 +233,26 @@ void signImageDigest(cfg, String service, String imageRef) {
     echo ">>> Verifying cosign signature for ${service}: ${imageRef}"
     withCredentials([string(credentialsId: publicKeyCredentialId, variable: 'COSIGN_PUBLIC_KEY')]) {
         withEnv([
-            "COSIGN_IMAGE=${cosignImage}",
             "COSIGN_IMAGE_REF=${imageRef}",
             "COSIGN_VERIFY_TLOG_FLAG=${verifyTlogFlag}"
         ]) {
             sh '''
                 set -eu
-                docker run --rm \
-                    -e COSIGN_PUBLIC_KEY \
-                    -e DOCKER_CONFIG=/docker-config \
-                    -v "${DOCKER_CONFIG}:/docker-config:ro" \
-                    "${COSIGN_IMAGE}" verify ${COSIGN_VERIFY_TLOG_FLAG} --key env://COSIGN_PUBLIC_KEY "${COSIGN_IMAGE_REF}"
+                cosign verify ${COSIGN_VERIFY_TLOG_FLAG} --key env://COSIGN_PUBLIC_KEY "${COSIGN_IMAGE_REF}"
             '''
+        }
+
+        if (hasSbom) {
+            echo ">>> Verifying SBOM attestation signature for ${service}..."
+            withEnv([
+                "COSIGN_IMAGE_REF=${imageRef}",
+                "COSIGN_VERIFY_TLOG_FLAG=${verifyTlogFlag}"
+            ]) {
+                sh '''
+                    set -eu
+                    cosign verify-attestation ${COSIGN_VERIFY_TLOG_FLAG} --key env://COSIGN_PUBLIC_KEY --type spdxjson "${COSIGN_IMAGE_REF}"
+                '''
+            }
         }
     }
 }
@@ -315,12 +338,7 @@ EOF
                 """
 
                 if (cfg.createGitOpsPr) {
-                    def repoUrl = cfg.gitOpsRepoUrl.toString().trim()
-                    def matcher = repoUrl =~ /github\.com[:\/]([^\/]+)\/([^\.]+)(\.git)?/
-                    if (!matcher) {
-                        error("Could not parse owner/repo from GitOps URL: ${repoUrl}")
-                    }
-                    def repoPath = "${matcher[0][1]}/${matcher[0][2]}"
+                    def repoPath = parseRepoPath(cfg.gitOpsRepoUrl.toString().trim())
                     def prBranch = "gitops-update-${tag}-${env.BUILD_NUMBER}"
 
                     echo ">>> Pull Request mode enabled. Checking out feature branch '${prBranch}'..."
@@ -329,23 +347,46 @@ EOF
 
                     def prTitle = "chore(gitops): update image references to ${tag}"
                     def prBody = "Automated PR created by Jenkins pipeline build #${env.BUILD_NUMBER} to update container image references to tag `${tag}`."
-                    def apiPayload = """{
-                        "title": "${prTitle}",
-                        "head": "${prBranch}",
-                        "base": "${targetBranch}",
-                        "body": "${prBody}"
-                    }"""
+                    def payloadJson = groovy.json.JsonOutput.toJson([
+                        title: prTitle,
+                        head: prBranch,
+                        base: targetBranch,
+                        body: prBody
+                    ])
+                    def payloadFile = "${env.WORKSPACE}/pr-payload.json"
+                    writeFile(file: payloadFile, text: payloadJson)
+
+                    def responseFile = sh(script: 'mktemp', returnStdout: true).trim()
+                    def statusFile = sh(script: 'mktemp', returnStdout: true).trim()
 
                     echo ">>> Creating GitHub Pull Request to target branch '${targetBranch}'..."
-                    sh """
-                        set +x
-                        curl -fsS -X POST \\
-                            -H "Accept: application/vnd.github+json" \\
-                            -H "Authorization: Bearer \$GIT_PASS" \\
-                            -H "X-GitHub-Api-Version: 2022-11-28" \\
-                            "https://api.github.com/repos/${repoPath}/pulls" \\
-                            -d '${shellQuote(apiPayload)}'
-                    """
+                    try {
+                        sh """
+                            set +x
+                            curl -sS -X POST \\
+                                -H "Accept: application/vnd.github+json" \\
+                                -H "Authorization: Bearer \$GIT_PASS" \\
+                                -H "X-GitHub-Api-Version: 2022-11-28" \\
+                                "https://api.github.com/repos/${repoPath}/pulls" \\
+                                -d @"${payloadFile}" \\
+                                -o "${responseFile}" \\
+                                -w "%{http_code}" > "${statusFile}"
+                        """
+                        def httpStatus = readFile(statusFile).trim()
+                        def httpResponse = readFile(responseFile).trim()
+                        echo ">>> GitHub API Response Status: ${httpStatus}"
+                        echo ">>> Response Body: ${httpResponse}"
+
+                        if (httpStatus == '201') {
+                            echo ">>> Pull Request created successfully."
+                        } else if (httpStatus == '422' && (httpResponse.contains('already exists') || httpResponse.contains('A pull request already exists'))) {
+                            echo ">>> A Pull Request for this branch already exists. Proceeding."
+                        } else {
+                            error("Failed to create GitHub Pull Request. Status: ${httpStatus}, Response: ${httpResponse}")
+                        }
+                    } finally {
+                        sh "rm -f '${payloadFile}' '${responseFile}' '${statusFile}'"
+                    }
                 } else {
                     pushWithRetry(gitOpsWorktree, targetBranch)
                 }
@@ -481,4 +522,13 @@ def pushWithRetry(gitOpsWorktree, targetBranch) {
 
 String shellQuote(String value) {
     return "'${value.replace("'", "'\"'\"'")}'"
+}
+
+@NonCPS
+String parseRepoPath(String repoUrl) {
+    def matcher = repoUrl =~ /github\.com[:\/]([^\/]+)\/([^\.]+)(\.git)?/
+    if (!matcher) {
+        throw new IllegalArgumentException("Could not parse owner/repo from GitOps URL: ${repoUrl}")
+    }
+    return "${matcher[0][1]}/${matcher[0][2]}"
 }
