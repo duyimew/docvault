@@ -4,6 +4,7 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
@@ -168,19 +169,40 @@ Desktop.ini
 .omx/project-memory.json
 .omx/
 .agent/
+.agents/
 .agent-memory/
+.gemini/
+.cursor/
+.windsurf/
+.superpowers/
+
+# Claude
+.claude/
 
 # Test and generated reports
 **/playwright-report/
 **/test-results/
+blob-report/
 *_out.txt
 *-output.txt
 error.txt
+scripts/.pw-state.json
+.pw-state.json
+*.storageState.json
+
+# Security scan & DevSecOps pipeline reports
 policy-rendered/
 policy-report/
-
-# Claude
-.claude/
+dependency-check-report/
+checkov-report/
+trivy-fs-report/
+zap-report/
+secret-scan-report/
+.scannerwork/
+report-task.txt
+sbom-*.json
+pr-payload.json
+.document-storage-gitops-commit-message.txt
 
 # Terraform
 **/.terraform/
@@ -210,6 +232,17 @@ downloaded_file.*
 test_big_file.pdf
 /text.txt
 
+# Local Docker & Cloudflare overrides
+docker-compose.override.yml
+docker-compose.*.override.yml
+tunnel-credentials.json
+
+# Local databases & dumps
+*.sqlite
+*.sqlite-journal
+*.db-journal
+dump.rdb
+
 # LaTeX
 *.aux
 *.bbl
@@ -227,3 +260,15 @@ test_big_file.pdf
 *.synctex.gz
 *.synctex(busy)
 *.bbl-SAVE-ERROR
+*.nav
+*.snm
+*.vrb
+*.acn
+*.acr
+*.alg
+*.gls
+*.glo
+*.glg
+_minted-*/
+report/build/*
+!report/build/main.pdf
