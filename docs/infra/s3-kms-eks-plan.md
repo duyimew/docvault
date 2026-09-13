@@ -743,7 +743,7 @@ vars/documentStorageGitOps.groovy
 
 `vars/documentStorageGitOps.groovy` la shared-library step dung chung cho Jenkins. No khong tu kich hoat pipeline; entrypoint Jenkins chinh la `Jenkinsfile.storage`.
 
-Runbook thao tac cutover chi tiet: `docs/s3-kms-cutover-runbook.md`.
+Runbook thao tac cutover chi tiet: `docs/runbooks/s3-kms-cutover-runbook.md`.
 
 ### 14.1 Local/manual script
 
@@ -803,7 +803,7 @@ Can cau hinh truoc khi bat `APPLY_DOCUMENT_STORAGE_TERRAFORM=true`:
 - Terraform S3 remote backend trong `infra/terraform/aws-eks/versions.tf`.
 - Remote backend nen co S3 versioning va state locking.
 - Jenkins agent co `terraform`, `yq`, `helm`, `git` trong PATH.
-- Jenkins agent co AWS credentials tam thoi. Voi setup hien tai, uu tien IAM Roles Anywhere/credential_process da mo ta trong `docs/jenkins_iam_roles_anywhere.md`.
+- Jenkins agent co AWS credentials tam thoi. Voi setup hien tai, uu tien IAM Roles Anywhere/credential_process da mo ta trong `docs/devsecops/jenkins_iam_roles_anywhere.md`.
 - Jenkins credential `github-credentials` co quyen push branch GitOps.
 
 Nen chay theo nhip van hanh sau:

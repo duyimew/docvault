@@ -2,14 +2,14 @@
 
 Cập nhật: 2026-06-11
 
-Tài liệu này tổng hợp các tính năng đang được triển khai ở frontend `apps/web` của DocVault. Nội dung được đối chiếu từ routes, navigation, component UI và API client hiện có. Tài liệu này mô tả năng lực của web app theo mã nguồn hiện tại, không thay thế cho tài liệu hướng dẫn thao tác chi tiết trong `docs/HUONG_DAN_SU_DUNG_WEB.md`.
+Tài liệu này tổng hợp các tính năng đang được triển khai ở frontend `apps/web` của DocVault. Nội dung được đối chiếu từ routes, navigation, component UI và API client hiện có. Tài liệu này mô tả năng lực của web app theo mã nguồn hiện tại, không thay thế cho tài liệu hướng dẫn thao tác chi tiết trong `docs/guides/HUONG_DAN_SU_DUNG_WEB.md`.
 
 ## Phạm vi đối chiếu
 
 - Frontend chính: `apps/web/src/app`, `apps/web/src/components`, `apps/web/src/features`, `apps/web/src/lib`.
 - Navigation và route: `apps/web/src/lib/constants/nav.ts`, `apps/web/src/lib/constants/routes.ts`.
 - API client: `apps/web/src/lib/api/endpoints.ts` và các file `*.api.ts` trong `apps/web/src/features`.
-- Tài liệu hướng dẫn hiện có: `HUONG_DAN_SU_DUNG_WEB.md`, `docs/HUONG_DAN_SU_DUNG_WEB.md`.
+- Tài liệu hướng dẫn hiện có: `docs/guides/HUONG_DAN_SU_DUNG_WEB.md`.
 
 ## Tóm tắt nhanh
 

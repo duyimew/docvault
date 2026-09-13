@@ -277,20 +277,20 @@ Các luồng E2E chính gồm:
 
 | Tài liệu | Khi nào đọc |
 | --- | --- |
-| [docs/RUN_PROJECT.md](docs/RUN_PROJECT.md) | Chạy local stack từng bước. |
-| [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md) | Runbook vận hành service, env và troubleshooting. |
-| [docs/DEVSECOPS_PIPELINE_SETUP_GUIDE.md](docs/DEVSECOPS_PIPELINE_SETUP_GUIDE.md) | Cấu hình Jenkins/SonarQube/GitOps pipeline. |
-| [docs/TEAM_SETUP_DEPLOYMENT_GUIDE.md](docs/TEAM_SETUP_DEPLOYMENT_GUIDE.md) | Hướng dẫn EKS, Argo CD, Jenkins, ZAP và observability cho team. |
+| [docs/runbooks/RUN_PROJECT.md](docs/runbooks/RUN_PROJECT.md) | Chạy local stack từng bước. |
+| [docs/runbooks/DEPLOYMENT_RUNBOOK.md](docs/runbooks/DEPLOYMENT_RUNBOOK.md) | Runbook vận hành service, env và troubleshooting. |
+| [docs/devsecops/DEVSECOPS_PIPELINE_SETUP_GUIDE.md](docs/devsecops/DEVSECOPS_PIPELINE_SETUP_GUIDE.md) | Cấu hình Jenkins/SonarQube/GitOps pipeline. |
+| [docs/runbooks/TEAM_SETUP_DEPLOYMENT_GUIDE.md](docs/runbooks/TEAM_SETUP_DEPLOYMENT_GUIDE.md) | Hướng dẫn EKS, Argo CD, Jenkins, ZAP và observability cho team. |
 | [vars/README.md](vars/README.md) | Ý nghĩa từng Jenkins Shared Library step. |
 | [infra/README.md](infra/README.md) | Bản đồ hạ tầng, GitOps và Kubernetes. |
 | [infra/terraform/aws-eks/README.md](infra/terraform/aws-eks/README.md) | Terraform stack tạo AWS EKS và IAM/IRSA. |
 | [infra/argocd-apps/README.md](infra/argocd-apps/README.md) | Argo CD child applications và sync wave. |
 | [policies/kyverno/README.md](policies/kyverno/README.md) | Policy-as-code gates cho Kubernetes. |
-| [docs/DANH_SACH_TINH_NANG_WEB.md](docs/DANH_SACH_TINH_NANG_WEB.md) | Danh sách tính năng web hiện tại. |
-| [docs/API_CONTRACT.md](docs/API_CONTRACT.md) | Contract API chính qua Gateway. |
-| [docs/web-security-evidence.md](docs/web-security-evidence.md) | Evidence runtime security của web/application. |
-| [docs/security-sca-triage.md](docs/security-sca-triage.md) | SCA triage, package đã fix và exception. |
-| [docs/pipeline-hardening-summary.md](docs/pipeline-hardening-summary.md) | Tóm tắt cải tiến pipeline, DAST và observability. |
+| [docs/guides/DANH_SACH_TINH_NANG_WEB.md](docs/guides/DANH_SACH_TINH_NANG_WEB.md) | Danh sách tính năng web hiện tại. |
+| [docs/architecture/API_CONTRACT.md](docs/architecture/API_CONTRACT.md) | Contract API chính qua Gateway. |
+| [docs/architecture/web-security-evidence.md](docs/architecture/web-security-evidence.md) | Evidence runtime security của web/application. |
+| [docs/devsecops/security-sca-triage.md](docs/devsecops/security-sca-triage.md) | SCA triage, package đã fix và exception. |
+| [docs/devsecops/pipeline-hardening-summary.md](docs/devsecops/pipeline-hardening-summary.md) | Tóm tắt cải tiến pipeline, DAST và observability. |
 
 ## Quy Ước Bảo Mật
 

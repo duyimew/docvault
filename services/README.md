@@ -30,4 +30,4 @@ pnpm --filter workflow-service start:dev
 pnpm --filter gateway start:dev
 ```
 
-Huong dan chay full stack chi tiet nam o `../docs/RUN_PROJECT.md`.
+Huong dan chay full stack chi tiet nam o `../docs/runbooks/RUN_PROJECT.md`.

@@ -314,7 +314,7 @@ Implementation:
 
 ```text
 vars/dependencyCheck.groovy
-docs/security-sca-triage.md
+docs/devsecops/security-sca-triage.md
 ```
 
 Dependency Check dùng:

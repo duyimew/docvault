@@ -6,10 +6,8 @@ Phạm vi: tài liệu này chỉ tổng hợp các cải tiến Web App / runti
 
 Nguồn đối chiếu:
 
-- `docs/ke_hoach_uu_tien_cai_thien_docvault_theo_gop_y_gvhd.md`
-- `docs/tong_hop_gop_y_docvault_webapp_devsecops_v2.md`
-- `docs/web-security-evidence.md`
-- `docs/web-key-rotation-and-mfa-runbook.md`
+- `docs/architecture/web-security-evidence.md`
+- `docs/runbooks/web-key-rotation-and-mfa-runbook.md`
 
 ## 1. Tổng quan kết quả
 
@@ -40,7 +38,7 @@ DocVault đã được nâng cấp từ một web app quản lý tài liệu có
 
 | Mã mục | Nội dung | Trạng thái | Bằng chứng chính |
 |---|---|---|---|
-| W-P0.1 | Secret/key lifecycle, MFA, grant token rotation | Gần xong | `docs/web-key-rotation-and-mfa-runbook.md`, grant token env `GRANT_TOKEN_CURRENT_KID` / `GRANT_TOKEN_PREVIOUS_KID` |
+| W-P0.1 | Secret/key lifecycle, MFA, grant token rotation | Gần xong | `docs/runbooks/web-key-rotation-and-mfa-runbook.md`, grant token env `GRANT_TOKEN_CURRENT_KID` / `GRANT_TOKEN_PREVIOUS_KID` |
 | W-P0.2 | RBAC + ACL + status + classification policy | Gần xong | `services/metadata-service/src/policy/policy.service.ts`, `apps/web/src/lib/auth/permissions.ts` |
 | W-P0.3 | Audit ingestion trust boundary | Xong | `services/audit-service/src/auth/service-token.guard.ts` |
 | W-P0.4 | Audit hash-chain tamper evidence | Gần xong | `GET /audit/verify-chain`, audit tamper demo script |
@@ -75,7 +73,7 @@ DocVault đã được nâng cấp từ một web app quản lý tài liệu có
   - `GRANT_TOKEN_PREVIOUS_KID`
   - `DOWNLOAD_GRANT_SECRET_<kid>`
   - `PREVIEW_GRANT_SECRET_<kid>`
-- Có runbook MFA và key rotation tại `docs/web-key-rotation-and-mfa-runbook.md`.
+- Có runbook MFA và key rotation tại `docs/runbooks/web-key-rotation-and-mfa-runbook.md`.
 
 **Ý nghĩa**
 

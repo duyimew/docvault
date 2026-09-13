@@ -69,7 +69,7 @@ Comment update/delete also validates the route `docId` and `commentId` as a pair
 
 Legacy single-secret dev mode is still supported when `GRANT_TOKEN_CURRENT_KID` is not set.
 
-Rotation runbook: `docs/web-key-rotation-and-mfa-runbook.md`.
+Rotation runbook: `docs/runbooks/web-key-rotation-and-mfa-runbook.md`.
 
 ### MFA Demo Posture
 
@@ -78,7 +78,7 @@ Rotation runbook: `docs/web-key-rotation-and-mfa-runbook.md`.
 - `co1` and `admin1` intentionally remain non-MFA automation users so password-grant smoke tests and E2E evidence can run without manual OTP enrollment.
 - Production posture should require MFA for all human admin and compliance officer accounts while keeping non-human automation on separate service accounts.
 
-Runbook: `docs/web-key-rotation-and-mfa-runbook.md`.
+Runbook: `docs/runbooks/web-key-rotation-and-mfa-runbook.md`.
 
 ### Download Posture and At-Rest Evidence
 

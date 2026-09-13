@@ -19,7 +19,7 @@ This avoids a public AWS Load Balancer for web/admin UIs. `cloudflared` creates 
 
 > [!WARNING]
 > **Deprecated/Limited Approach for Registry Push**: Do not use the Cloudflare Tunnel/Proxy path for Jenkins `docker push` or Docker registry operations. Cloudflare's free plan limits uploads to 100MB, causing registry pushes of heavy services to fail with a `413 Payload Too Large` error.
-> Use the **Cloudflare Gray-Cloud DNS-only** path (routing via AWS LoadBalancer -> ingress-nginx) for all Docker registry activities. See [harbor_cloudflare_dns_tls_guide.md](file:///D:/projects/docvaultNewest/docvault/docs/harbor_cloudflare_dns_tls_guide.md) for the active production architecture.
+> Use the **Cloudflare Gray-Cloud DNS-only** path (routing via AWS LoadBalancer -> ingress-nginx) for all Docker registry activities. See [harbor_cloudflare_dns_tls_guide.md](./harbor_cloudflare_dns_tls_guide.md) for the active production architecture.
 
 
 ## 1. What Cloudflare Means by Published Application Route
@@ -355,7 +355,7 @@ If Harbor is still starting or failing, fix pods before debugging Cloudflare.
 
 > [!WARNING]
 > This section describes the previous Cloudflare Tunnel Harbor approach. It is retained for historical context but is NOT recommended for active use due to Cloudflare's 100MB upload limit on the free plan (causing `413 Payload Too Large` errors when pushing larger Docker images).
-> Active deployment uses the Cloudflare Gray-cloud DNS-only path with NGINX Ingress documented in [harbor_cloudflare_dns_tls_guide.md](file:///D:/projects/docvaultNewest/docvault/docs/harbor_cloudflare_dns_tls_guide.md).
+> Active deployment uses the Cloudflare Gray-cloud DNS-only path with NGINX Ingress documented in [harbor_cloudflare_dns_tls_guide.md](./harbor_cloudflare_dns_tls_guide.md).
 
 For registry push/pull traffic, use the NGINX Ingress + DNS-only setup to avoid proxy limits.
 

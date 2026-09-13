@@ -1,0 +1,61 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Inter, Segoe UI, Arial, sans-serif",
+    "fontSize": "15px",
+    "primaryColor": "#ECFDF3",
+    "primaryBorderColor": "#22C55E",
+    "primaryTextColor": "#111827",
+    "lineColor": "#64748B",
+    "secondaryColor": "#EFF6FF",
+    "tertiaryColor": "#FFF7ED"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "basis",
+    "nodeSpacing": 58,
+    "rankSpacing": 88
+  }
+}}%%
+flowchart LR
+  subgraph K["Identity boundary"]
+    KC["Keycloak<br/>external identity<br/>roles / groups / users"]
+  end
+
+  subgraph M["metadata-service owns PostgreSQL<br/>docvault_metadata"]
+    D["documents<br/><b>id</b> PK<br/>ownerId<br/>classification<br/>status<br/>currentVersion"]
+    V["document_versions<br/><b>id</b> PK<br/>docId FK<br/>version<br/>objectKey<br/>checksum<br/>filename"]
+    A["document_acl<br/><b>id</b> PK<br/>docId FK<br/>subjectType<br/>subjectId<br/>permission<br/>effect"]
+    W["document_workflow_history<br/><b>id</b> PK<br/>docId FK<br/>fromStatus / toStatus<br/>action<br/>actorId"]
+  end
+
+  subgraph AU["audit-service owns MongoDB<br/>docvault_audit"]
+    E["audit_events<br/><b>eventId</b> PK<br/>actorId<br/>action<br/>resourceType / resourceId<br/>result<br/>prevHash / hash"]
+  end
+
+  subgraph S["document-service owns Object Storage"]
+    O["MinIO / S3<br/>actual blob files<br/>doc/{docId}/v{n}/{filename}"]
+  end
+
+  D -->|"1 - N<br/>FK"| V
+  D -->|"1 - N<br/>FK"| A
+  D -->|"1 - N<br/>FK"| W
+
+  V -. "objectKey<br/>logical pointer" .-> O
+  E -. "resourceId<br/>logical reference" .-> D
+  E -. "resourceId<br/>logical reference" .-> V
+
+  KC -. "ownerId" .-> D
+  KC -. "actorId" .-> W
+  KC -. "actorId" .-> E
+  KC -. "subjectId" .-> A
+
+  classDef metadata fill:#ECFDF3,stroke:#22C55E,stroke-width:2px,color:#111827;
+  classDef audit fill:#FEF2F2,stroke:#EF4444,stroke-width:2px,color:#111827;
+  classDef storage fill:#EFF6FF,stroke:#3B82F6,stroke-width:2px,color:#111827;
+  classDef identity fill:#F5F3FF,stroke:#8B5CF6,stroke-width:2px,color:#111827;
+
+  class D,V,A,W metadata;
+  class E audit;
+  class O storage;
+  class KC identity;

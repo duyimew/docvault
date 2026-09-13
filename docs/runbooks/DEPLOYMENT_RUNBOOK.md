@@ -25,7 +25,7 @@ Client → Gateway (:3000) → Backend services (:3001–:3005)
 | notification-service | 3005 | MongoDB |
 | web (Next.js) | 3006 | — |
 
-Infra (Docker): PostgreSQL, MongoDB, MinIO, Keycloak.
+Infra (Docker): PostgreSQL, MongoDB, Mongo Express, MinIO, Keycloak, ClamAV.
 
 **Startup order is strict: Gateway must start LAST**, after all backend
 services are ready (it proxies to them).
@@ -37,16 +37,17 @@ services are ready (it proxies to them).
 ```bash
 # 1. Environment files (not tracked by git)
 cp .env.example .env
+cp infra/.env.example infra/.env
 # then copy/create per-service .env from each services/*/.env.example
 
 # 2. Install dependencies
 pnpm install
 
-# 3. Start Docker infra (PostgreSQL, MongoDB, MinIO, Keycloak)
-docker compose -f infra/docker-compose.dev.yml up -d
+# 3. Start Docker infra (PostgreSQL, MongoDB, MinIO, Keycloak, ClamAV)
+docker compose -f infra/docker-compose.dev.yml --env-file infra/.env up -d
 
 # 4. Wait for infra healthy
-docker compose -f infra/docker-compose.dev.yml ps
+docker compose -f infra/docker-compose.dev.yml --env-file infra/.env ps
 
 # 5. Generate Prisma client + apply migrations
 pnpm --filter metadata-service prisma:generate
@@ -69,7 +70,7 @@ pnpm start:sequential
 
 ```bash
 # Ensure Docker infra is running
-docker compose -f infra/docker-compose.dev.yml up -d
+docker compose -f infra/docker-compose.dev.yml --env-file infra/.env up -d
 
 # Recommended: one-command sequential startup (skips migrations)
 pnpm start:sequential
@@ -79,7 +80,7 @@ RUN_PRISMA_DEPLOY=1 pnpm start:sequential
 ```
 
 Manual order (if not using the script):
-1. Docker infra (PostgreSQL, MongoDB, MinIO, Keycloak)
+1. Docker infra (PostgreSQL, MongoDB, MinIO, Keycloak, ClamAV)
 2. `pnpm --filter metadata-service prisma:deploy`
 3. Backend: metadata → document → workflow → notification → audit
 4. Gateway
@@ -91,9 +92,9 @@ Manual order (if not using the script):
 
 ```bash
 # Stop app processes (Ctrl+C on the start:sequential process), then infra:
-docker compose -f infra/docker-compose.dev.yml down
+docker compose -f infra/docker-compose.dev.yml --env-file infra/.env down
 # Add -v to also remove data volumes (DESTROYS all data — dev only):
-# docker compose -f infra/docker-compose.dev.yml down -v
+# docker compose -f infra/docker-compose.dev.yml --env-file infra/.env down -v
 ```
 
 ---

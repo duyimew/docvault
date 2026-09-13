@@ -7,14 +7,14 @@ deploy bằng Argo CD/GitOps và truy cập web app trên EKS qua NodePort.
 Tài liệu này gom các bước quan trọng nhất để triển khai trên EKS. Khi cần chi
 tiết hơn, đọc thêm:
 
-- `docs/DEVSECOPS_PIPELINE_SETUP_GUIDE.md`: cấu hình Jenkins pipeline.
-- `docs/jenkins_docker.md`: chạy Jenkins bằng Docker.
-- `docs/sonarqube-docker-jenkins-setup.md`: chạy SonarQube và nối với Jenkins.
-- `docs/docvault_terraform_eks_argocd_plan.md`: tạo EKS và bootstrap Argo CD.
-- `docs/docvault_eks_pause_resume_runbook.md`: tắt/mở node EKS để tiết kiệm chi phí.
-- `docs/DEPLOYMENT_RUNBOOK.md`: cẩm nang triển khai và vận hành hệ thống DocVault.
-- `docs/demo-flow.md`: kịch bản demo EKS gồm app, Jenkins/ZAP, Grafana và Loki.
-- `docs/security-sca-triage.md`: bản ghi xử lý SCA, package đã fix và exception còn lại.
+- `docs/devsecops/DEVSECOPS_PIPELINE_SETUP_GUIDE.md`: cấu hình Jenkins pipeline.
+- `docs/devsecops/jenkins_docker.md`: chạy Jenkins bằng Docker.
+- `docs/devsecops/sonarqube-docker-jenkins-setup.md`: chạy SonarQube và nối với Jenkins.
+- `docs/infra/docvault_terraform_eks_argocd_plan.md`: tạo EKS và bootstrap Argo CD.
+- `docs/runbooks/docvault_eks_pause_resume_runbook.md`: tắt/mở node EKS để tiết kiệm chi phí.
+- `docs/runbooks/DEPLOYMENT_RUNBOOK.md`: cẩm nang triển khai và vận hành hệ thống DocVault.
+- `docs/guides/demo-flow.md`: kịch bản demo EKS gồm app, Jenkins/ZAP, Grafana và Loki.
+- `docs/devsecops/security-sca-triage.md`: bản ghi xử lý SCA, package đã fix và exception còn lại.
 
 ## 1. Repository và Branch Model
 
@@ -454,7 +454,7 @@ SCA dùng OWASP Dependency Check trong Jenkins và `pnpm audit` có thể dùng 
 Các dependency trực tiếp và override bảo mật đã được xử lý trong `package.json`, `apps/web/package.json` và `pnpm-lock.yaml`. Chi tiết xem:
 
 ```text
-docs/security-sca-triage.md
+docs/devsecops/security-sca-triage.md
 ```
 
 Policy đề xuất:
@@ -581,7 +581,7 @@ Kiểm tra pipeline:
 - Stage `Post-deploy Smoke Test` pass với `GET /` và `GET /api/health`.
 - Smoke test thủ công EKS đã pass: login Keycloak, upload file, preview file, download file.
 - DAST ZAP đã chạy với `ZAP_TARGET=http://<node-external-ip>:30006`, `FAIL-NEW: 0`, report HTML/JSON đã được archive.
-- Dependency Check report đã được archive và đối chiếu với `docs/security-sca-triage.md`.
+- Dependency Check report đã được archive và đối chiếu với `docs/devsecops/security-sca-triage.md`.
 - Observability đã chạy: `monitoring-stack` và `loki-stack` `Synced/Healthy`.
 - Grafana metrics và Loki logs đã có screenshot bằng chứng.
 

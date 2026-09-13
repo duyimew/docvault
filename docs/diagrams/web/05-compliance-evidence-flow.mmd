@@ -1,0 +1,37 @@
+%%{init: {"theme": "neutral", "flowchart": {"curve": "basis", "htmlLabels": true}}}%%
+flowchart TB
+  subgraph Signals["Runtime signals"]
+    WorkflowEvents["Workflow events<br/>submit, approve, reject, archive"]
+    AccessEvents["Access events<br/>preview/download allow/deny"]
+    UploadEvents["Upload controls<br/>malware blocked, DLP detected"]
+    RetentionEvents["Retention records<br/>due soon, overdue, archived"]
+    AclEvents["ACL/access review signals<br/>broad grants, stale permissions"]
+  end
+
+  Audit["audit-service<br/>append-only events + hash-chain"]
+  Security["Security page<br/>posture, policy denies, DLP, malware, risk scoring, anomalies"]
+  Recommendations["Security recommendations<br/>OPEN -> INVESTIGATING -> REVIEWED -> RESOLVED"]
+  AuditPage["Audit page<br/>filters, verify-chain, drill-down"]
+  RetentionPage["Retention page<br/>records lifecycle evidence"]
+  AccessReview["Access Review<br/>permission recertification"]
+  Evidence["Evidence Center<br/>builder + presentation"]
+  StepUp["Step-up proof<br/>for sensitive export/run actions"]
+  Output["Evidence output<br/>manifest JSON, bundle JSON, report HTML, document packets"]
+
+  WorkflowEvents --> Audit
+  AccessEvents --> Audit
+  UploadEvents --> Audit
+  RetentionEvents --> Audit
+  AclEvents --> Audit
+
+  Audit --> AuditPage
+  Audit --> Security
+  Security --> Recommendations
+  Recommendations --> Evidence
+  AuditPage --> Evidence
+  RetentionPage --> Evidence
+  AccessReview --> Evidence
+  Evidence --> StepUp
+  StepUp --> Output
+
+  Output -. excludes .-> Sensitive["Khong dua vao evidence:<br/>file content, object key, presigned URL, grant token"]

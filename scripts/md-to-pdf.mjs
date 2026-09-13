@@ -1,4 +1,4 @@
-// Generates docs/HUONG_DAN_SU_DUNG_WEB.pdf from the markdown guide.
+// Generates docs/guides/HUONG_DAN_SU_DUNG_WEB.pdf from the markdown guide.
 // Uses `marked` for MD->HTML and Playwright Chromium for HTML->PDF.
 // Local images (images/web/*.png) are inlined as base64 so the PDF is self-contained.
 // Usage: node scripts/md-to-pdf.mjs
@@ -19,8 +19,8 @@ const { chromium } = require(
   join(repoRoot, 'node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/index.js'),
 );
 
-const MD = join(repoRoot, 'docs/HUONG_DAN_SU_DUNG_WEB.md');
-const OUT = join(repoRoot, 'docs/HUONG_DAN_SU_DUNG_WEB.pdf');
+const MD = join(repoRoot, 'docs/guides/HUONG_DAN_SU_DUNG_WEB.md');
+const OUT = join(repoRoot, 'docs/guides/HUONG_DAN_SU_DUNG_WEB.pdf');
 const IMG_DIR = join(repoRoot, 'docs/images/web');
 
 async function inlineImages(md) {

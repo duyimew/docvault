@@ -55,7 +55,8 @@ Luồng mục tiêu:
 
 ```text
 Git push -> Jenkins -> install/test/scan -> Docker build -> Trivy image scan
--> Docker Hub push -> update Helm values on GitOps branch -> ArgoCD sync
+-> Harbor push -> optional cosign signing/SBOM attestation
+-> update Helm values on GitOps branch -> ArgoCD sync
 ```
 
 ## 3. Chuẩn Bị GitHub
@@ -181,12 +182,18 @@ git --version
 
 ## 7. Cấu Hình Jenkins Credentials
 
-Pipeline yêu cầu đúng credential IDs sau:
+Pipeline dùng các credential IDs sau. Một số credential chỉ bắt buộc khi bật tính năng tương ứng:
 
 | ID | Loại | Dùng cho |
 |---|---|---|
-| `dockerhub-credentials` | Username with password | `docker login`, push images |
+| `harbor-docvault-dev-robot-token` | Secret text | Harbor robot token để `docker login` và push images. |
 | `github-credentials` | Username with password/token | push GitOps commit |
+| `sonar-token` | Secret text | SonarQube token nếu Jenkins SonarQube installation cần token. |
+| `nvd-api-key` | Secret text | OWASP Dependency-Check/NVD API key để tránh rate limit. |
+| `cosign-private-key` | Secret text | Ký image digest khi `SIGN_IMAGES=true`. |
+| `cosign-password` | Secret text | Password giải mã private key của cosign. |
+| `cosign-public-key` | Secret text | Optional, verify chữ ký sau khi ký. |
+| `jenkins-argocd-kubeconfig` | Secret file | Optional, kubeconfig read-only để Jenkins kiểm tra Argo CD health. |
 
 Tạo trong:
 
@@ -231,20 +238,24 @@ vars/docvaultConfig.groovy
 Kiểm tra và sửa các giá trị sau cho đúng môi trường của bạn:
 
 ```groovy
-dockerOrg: '<dockerhub-user>'
+registryHost: 'harbor.docvault.id.vn'
+registryNamespace: 'docvault-dev'
+registryCredentialId: 'harbor-docvault-dev-robot-token'
+registryCredentialType: 'secretText'
+registryUsername: 'robot$docvault-dev+jenkins-push'
 gitOpsRepoUrl: 'https://github.com/daithang59/docvault.git'
 gitOpsBranch: 'gitops-testing'
 sonarHostUrl: 'http://host.docker.internal:9000'
 zapTarget: ''
 ```
 
-Trong repo hiện tại `dockerOrg` đã đặt là `daithang59`. Nếu Docker Hub username của bạn khác GitHub username, đổi `dockerOrg` trong `vars/docvaultConfig.groovy` và `repository` trong `infra/k8s/values/*.yaml` sang namespace Docker Hub thật.
+Trong repo hiện tại `vars/docvaultConfig.groovy` và `infra/k8s/values/*.yaml` đang hướng tới Harbor `harbor.docvault.id.vn/docvault-dev`. Nếu dùng registry khác, đổi đồng bộ `REGISTRY_HOST`, `REGISTRY_NAMESPACE`, credential Jenkins và `image.repository` trong values.
 
-Khi chua deploy len Kubernetes, giu `RUN_ZAP=false`. Sau khi Gateway co URL that va Jenkins/ZAP container curl duoc URL do, dien pipeline parameter `ZAP_TARGET=http://<gateway-url>/api` va bat `RUN_ZAP=true`.
+Khi chưa deploy lên Kubernetes, giữ `RUN_ZAP=false`. Sau khi web app có URL thật và Jenkins/ZAP container curl được URL đó, điền pipeline parameter `ZAP_TARGET=http://<web-url>` và bật `RUN_ZAP=true`. Không dùng `/api` làm target baseline vì `/api` root có thể trả 404.
 
 ## 10. Tạo Jenkins Shared Library
 
-`Jenkinsfile` có dòng:
+`Jenkinsfile` có dòng `@Library('docvault@...')`. Version sau dấu `@` phải trỏ tới branch đang chứa `vars/*.groovy` tương ứng với Jenkinsfile đang chạy. Ví dụ khi chạy branch pipeline:
 
 ```groovy
 @Library('docvault@devsecops-pipeline') _
@@ -252,7 +263,7 @@ Khi chua deploy len Kubernetes, giu `RUN_ZAP=false`. Sau khi Gateway co URL that
 
 Vì vậy Jenkins phải biết shared library tên `docvault`.
 
-Sau khi PR đã merge vào `testing`, có thể đổi lại `@Library('docvault@testing') _` và cấu hình Jenkins chạy branch `testing`.
+Nếu branch triển khai khác `devsecops-pipeline`, cập nhật Global Trusted Pipeline Library hoặc dòng `@Library(...)` cho khớp branch thực tế.
 
 Vào:
 
@@ -400,7 +411,7 @@ git push -u origin HEAD:devsecops-pipeline
 
 ### Jenkins không tìm thấy shared library
 
-Kiểm tra `@Library('docvault@devsecops-pipeline')` khi chạy trước merge, hoặc `@Library('docvault@testing')` sau khi đã merge. Global Trusted Pipeline Library phải có tên `docvault`.
+Kiểm tra `@Library('docvault@<branch>')` trong `Jenkinsfile` và Default version trong Global Trusted Pipeline Library. Global Trusted Pipeline Library phải có tên `docvault`, và branch được trỏ tới phải chứa thư mục `vars/`.
 
 ### Jenkins không có Docker
 
@@ -433,7 +444,7 @@ git push -u origin gitops-testing
 
 ### ZAP fail
 
-ZAP can gateway API that su reachable tu Jenkins/ZAP container. Neu chua deploy cluster, giu `RUN_ZAP=false`. Khi da co target, dien `ZAP_TARGET=http://<gateway-url>/api`.
+ZAP cần web app thật sự reachable từ Jenkins/ZAP container. Nếu chưa deploy cluster, giữ `RUN_ZAP=false`. Khi đã có target, điền `ZAP_TARGET=http://<web-url>` hoặc dùng `DEPLOY_TARGET_URL`. Không dùng `/api` làm target baseline.
 
 ## 16. Thứ Tự Làm Khuyến Nghị
 

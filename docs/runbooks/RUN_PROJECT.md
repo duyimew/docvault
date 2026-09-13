@@ -1,6 +1,6 @@
 # Running the Project Locally
 
-Updated: 2026-06-14
+Updated: 2026-06-26
 
 This document is a guide for running DocVault on a local machine based on the current code state.
 
@@ -16,7 +16,7 @@ This document is a guide for running DocVault on a local machine based on the cu
   - `3003` workflow-service
   - `3004` audit-service
   - `3005` notification-service
-  - `3100` frontend web — use this port to avoid conflicts with backend
+  - `3006` frontend web — default from `apps/web/package.json`
   - `5432` Postgres
   - `5555` Prisma Studio (PostgreSQL GUI)
   - `8080` Keycloak
@@ -35,6 +35,12 @@ pnpm install
 ## 3. Start Infrastructure
 
 The local infra is in `infra/docker-compose.dev.yml`.
+
+Create the infra env file once before starting Compose:
+
+```bash
+cp infra/.env.example infra/.env
+```
 
 ```bash
 docker compose -f infra/docker-compose.dev.yml --env-file infra/.env up -d
@@ -56,7 +62,7 @@ Note:
 
 ## 4. Create Environment Files
 
-Create the following files by copying from `.env.example`:
+Create the following service env files by copying from each nearest `.env.example`:
 
 - `services/gateway/.env`
 - `services/metadata-service/.env`
@@ -64,7 +70,8 @@ Create the following files by copying from `.env.example`:
 - `services/workflow-service/.env`
 - `services/audit-service/.env`
 - `services/notification-service/.env`
-- `apps/web/.env.local`
+
+Create `apps/web/.env.local` manually if you want to override the frontend defaults.
 
 Default values in the repo already match the local stack:
 
@@ -77,11 +84,13 @@ Default values in the repo already match the local stack:
 - Keycloak: `http://localhost:8080`
 - MinIO: `http://localhost:9000`
 
-Important frontend variables:
+Recommended frontend variables:
 
 ```env
 NEXT_PUBLIC_APP_NAME=DocVault
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api
+NEXT_PUBLIC_API_BASE_URL=/api
+GATEWAY_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3006
 ```
 
 ## 5. Run Migrations
@@ -152,7 +161,7 @@ pnpm --filter gateway start:dev
 
 Backend URLs after startup:
 
-- Gateway Swagger: `http://localhost:3000/docs`
+- Gateway Swagger: `http://localhost:3000/api/docs`
 - Metadata Swagger: `http://localhost:3001/docs`
 - Document Swagger: `http://localhost:3002/docs`
 - Workflow Swagger: `http://localhost:3003/docs`
@@ -161,7 +170,7 @@ Backend URLs after startup:
 
 Quick health check:
 
-- `http://localhost:3000/health`
+- `http://localhost:3000/api/health`
 - `http://localhost:3001/health`
 - `http://localhost:3002/health`
 - `http://localhost:3003/health`
@@ -170,25 +179,27 @@ Quick health check:
 
 ## 8. Start Frontend
 
-The frontend should run separately on port `3100` to avoid conflicts with:
-
-- gateway `3000`
-- metadata-service `3001`
-- remaining backend services `3002` to `3005`
+The frontend runs on port `3006` by default. This avoids conflicts with the gateway and backend services on ports `3000` to `3005`.
 
 Run:
 
 ```bash
-pnpm --filter web dev -- --port 3100
+pnpm --filter web dev
 ```
 
 Open:
 
-- `http://localhost:3100`
+- `http://localhost:3006`
 
 Login page:
 
-- `http://localhost:3100/login`
+- `http://localhost:3006/login`
+
+If you intentionally want another port, override it explicitly:
+
+```bash
+pnpm --filter web dev -- --port 3100
+```
 
 ## 9. Seed Demo Business Flows
 
@@ -274,12 +285,12 @@ Root script currently has:
 pnpm dev
 ```
 
-However, this script runs the entire workspace through Turbo, including `apps/web`. Since web defaults to port `3000`, it may conflict with the gateway if you don't change the port.
+However, this script runs the entire workspace through Turbo and starts long-running dev tasks together. It is convenient for quick checks, but logs are harder to follow than running backend and frontend separately.
 
 Current recommendation:
 
-- run backend services separately as in step 7
-- run frontend separately as in step 8 on port `3100`
+- run backend services separately as in step 7, or use `pnpm start:sequential`
+- run frontend separately as in step 8 on port `3006`
 
 ## 13. Common Errors
 
@@ -288,16 +299,17 @@ Current recommendation:
 Check:
 
 - Postgres container is healthy
-- database `docvault_metadata` and `docvault_audit` have been initialized
+- database `docvault_metadata` has been initialized
+- MongoDB is healthy for `audit-service` and `notification-service`
 - old volume is not holding onto old schema
 
 ### Frontend API Call Error
 
 Check:
 
-- `apps/web/.env.local` points to correct `NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api`
+- `apps/web/.env.local` points to `NEXT_PUBLIC_API_BASE_URL=/api`, or to `http://localhost:3000/api` if you intentionally bypass the Next.js proxy
 - gateway is running on port `3000`
-- frontend is open on `3100`, not `3000` or `3001`
+- frontend is open on `3006`, not `3000` or `3001`
 
 ### Cannot Get Keycloak Token
 
@@ -320,8 +332,8 @@ Check:
 ## 14. Related Documents
 
 - `README.md`
-- `docs/demo-flow.md`
-- `docs/demo-users.md`
-- `docs/PROJECT_STATUS.md`
+- `docs/guides/demo-flow.md`
+- `docs/guides/demo-users.md`
+- `docs/architecture/PROJECT_STATUS.md`
 - `infra/README.md`
 - `services/README.md`

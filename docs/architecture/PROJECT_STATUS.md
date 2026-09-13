@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-Updated: 2026-05-30
+Updated: 2026-06-26
 
 Tài liệu này phản ánh trạng thái hiện tại của repo dựa trên code runtime trong `apps/web`, `services/*`, `infra/*`, `libs/*` và `scripts/e2e-check.mjs`, không chỉ dựa trên các file markdown cũ.
 
@@ -192,7 +192,7 @@ Các endpoint hiện có:
 
 ### 6. Audit Service
 
-`services/audit-service` lưu audit event trong Postgres. Service này hiện:
+`services/audit-service` lưu audit event trong MongoDB bằng Mongoose. Service này hiện:
 
 - append audit record
 - hỗ trợ query theo actor/action/resource/result/time
@@ -317,7 +317,7 @@ Schema ACL hỗ trợ các permission:
 
 ### Audit DB
 
-Model runtime:
+Model runtime trong MongoDB:
 
 - `AuditEvent`
 
@@ -369,8 +369,9 @@ Frontend permission helpers hiện cũng đã mô hình hóa:
 
 Ghi chú:
 
-- MongoDB vẫn còn trong compose nhưng có vẻ không còn được dùng ở runtime MVP hiện tại
-- Postgres đang được metadata-service và audit-service dùng
+- MongoDB vẫn còn trong compose và đang được dùng ở runtime MVP hiện tại
+- Postgres đang được metadata-service dùng
+- MongoDB đang được audit-service và notification-service dùng
 - MinIO đang được document-service dùng
 - Keycloak dùng cho JWT validation và seed user local
 
@@ -398,7 +399,8 @@ Các service hiện đều có script cho:
 Prisma deploy script hiện có ở:
 
 - `metadata-service`
-- `audit-service`
+
+Audit-service hiện dùng MongoDB/Mongoose nên không có bước Prisma deploy runtime.
 
 ## Trạng thái test và verification
 

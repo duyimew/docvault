@@ -1,6 +1,6 @@
 # Hướng dẫn sử dụng hệ thống web DocVault
 
-Tài liệu này hướng dẫn người dùng cuối thao tác trên giao diện web DocVault: đăng nhập, điều hướng menu, và sử dụng từng tính năng theo vai trò. Nếu bạn cần hướng dẫn cài đặt và khởi động hệ thống, xem `docs/HUONG_DAN_SU_DUNG.md`.
+Tài liệu này hướng dẫn người dùng cuối thao tác trên giao diện web DocVault: đăng nhập, điều hướng menu, và sử dụng từng tính năng theo vai trò. Nếu bạn cần hướng dẫn cài đặt và khởi động hệ thống, xem `docs/guides/HUONG_DAN_SU_DUNG.md`.
 
 DocVault là hệ thống quản lý tài liệu doanh nghiệp, hỗ trợ vòng đời đầy đủ: tạo → tải lên → duyệt → xuất bản → lưu trữ, kèm phân quyền theo vai trò (RBAC) và nhật ký kiểm toán chống giả mạo.
 
@@ -319,4 +319,4 @@ Chỉ **Editor (chủ sở hữu)** và **Admin** quản lý được ACL.
 - **Không thấy mục menu mong đợi**: menu hiển thị theo vai trò; đăng nhập bằng tài khoản có vai trò phù hợp (xem mục 3).
 - **Không tải được file dù đã PUBLISHED**: nếu bạn là Compliance Officer, đây là hành vi đúng — CO không bao giờ tải được file.
 
-Chi tiết cách cài đặt, khởi động và kiểm thử hệ thống xem `docs/HUONG_DAN_SU_DUNG.md`.
+Chi tiết cách cài đặt, khởi động và kiểm thử hệ thống xem `docs/guides/HUONG_DAN_SU_DUNG.md`.

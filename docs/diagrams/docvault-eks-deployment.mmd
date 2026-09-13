@@ -1,0 +1,105 @@
+%%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 45, "rankSpacing": 70}}}%%
+flowchart LR
+  GitOps["GitOps branch<br/>gitops-testing"]
+  Harbor["Harbor Registry"]
+  AWSSecrets["AWS Secrets Manager"]
+  User["User Browser"]
+  Cloudflare["Cloudflare DNS"]
+  AwsLb["AWS Load Balancer"]
+  Kms["AWS KMS"]
+  S3["AWS S3 buckets"]
+
+  subgraph EKS["AWS EKS Cluster"]
+    direction LR
+
+    subgraph Argo["Namespace: argocd"]
+      direction TB
+      RootApp["docvault-root"]
+      ChildApps["Argo child apps"]
+    end
+
+    subgraph Platform["Cluster platform controllers"]
+      direction TB
+      IngressNginx["ingress-nginx"]
+      CertManager["cert-manager"]
+      LetsEncryptIssuer["letsencrypt-cloudflare"]
+      ExternalSecretsOp["External Secrets Operator"]
+      CnpgOperator["CloudNativePG Operator"]
+      PerconaOperator["Percona PSMDB Operator"]
+    end
+
+    subgraph Docvault["Namespace: docvault"]
+      direction TB
+      PublicRoutes["Public Ingress + NetworkPolicy"]
+      Web["docvault-web"]
+      Gateway["docvault-gateway"]
+      Services["Backend services"]
+      Keycloak["Keycloak"]
+      SecretStore["SecretStore"]
+      RuntimeSecrets["Runtime secrets"]
+      DataStores["Data stores"]
+      KeycloakHook["Keycloak PostSync job"]
+    end
+
+    subgraph Monitoring["Namespace: monitoring"]
+      direction TB
+      Prometheus["Prometheus"]
+      Grafana["Grafana"]
+      Loki["Loki"]
+      KubeMetrics["Kubernetes metrics"]
+    end
+  end
+
+  GitOps -->|target revision| RootApp
+  RootApp -->|app-of-apps sync| ChildApps
+  ChildApps -->|deploy ingress| PublicRoutes
+  ChildApps -->|deploy web| Web
+  ChildApps -->|deploy gateway| Gateway
+  ChildApps -->|deploy services| Services
+  ChildApps -->|deploy identity| Keycloak
+  ChildApps -->|deploy SecretStore| SecretStore
+  ChildApps -->|deploy DB CRs| DataStores
+  ChildApps -->|PostSync hook| KeycloakHook
+  ChildApps -->|monitoring app| Prometheus
+  ChildApps -->|monitoring app| Grafana
+  ChildApps -->|logging app| Loki
+
+  User -->|HTTPS request| Cloudflare
+  Cloudflare -->|DNS to ELB| AwsLb
+  AwsLb -->|HTTPS traffic| IngressNginx
+  IngressNginx -->|IngressClass nginx| PublicRoutes
+  CertManager -->|uses issuer| LetsEncryptIssuer
+  LetsEncryptIssuer -->|DNS-01 challenge| Cloudflare
+  LetsEncryptIssuer -->|TLS certificates| PublicRoutes
+  PublicRoutes -->|app.docvault.id.vn| Web
+  PublicRoutes -->|auth.docvault.id.vn| Keycloak
+
+  Web -->|/api proxy| Gateway
+  Web -->|OIDC| Keycloak
+  Gateway -->|token check| Keycloak
+  Gateway -->|internal APIs| Services
+
+  Services -->|DB access| DataStores
+  Services -->|object storage| S3
+  Keycloak -->|realm DB| DataStores
+  DataStores -->|backup| S3
+  Kms -->|SSE-KMS| S3
+
+  Harbor -->|image pull auth| RuntimeSecrets
+
+  AWSSecrets -->|secret source| SecretStore
+  ExternalSecretsOp -->|reconcile| SecretStore
+  SecretStore -->|K8s Secrets| RuntimeSecrets
+  CnpgOperator -->|manage Postgres| DataStores
+  PerconaOperator -->|manage MongoDB| DataStores
+
+  RuntimeSecrets -->|env/config| Web
+  RuntimeSecrets -->|env/config| Gateway
+  RuntimeSecrets -->|env/config| Services
+  RuntimeSecrets -->|admin/client secret| Keycloak
+  RuntimeSecrets -->|DB/Mongo creds| DataStores
+  KeycloakHook -->|configure public client| Keycloak
+
+  KubeMetrics -->|scraped metrics| Prometheus
+  Grafana -->|metrics datasource| Prometheus
+  Grafana -->|logs datasource| Loki

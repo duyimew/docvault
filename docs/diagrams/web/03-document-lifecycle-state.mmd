@@ -1,0 +1,32 @@
+%%{init: {"theme": "neutral", "flowchart": {"curve": "linear", "htmlLabels": true, "nodeSpacing": 45, "rankSpacing": 70}}}%%
+flowchart LR
+  classDef state fill:#EEF2FF,stroke:#4F46E5,stroke-width:1.5px,color:#111827;
+  classDef terminal fill:#FFFFFF,stroke:#1F2937,stroke-width:1.5px,color:#111827;
+  classDef deleted fill:#FEE2E2,stroke:#DC2626,stroke-width:1.5px,color:#450A0A;
+  classDef note fill:#F8FAFC,stroke:#94A3B8,stroke-width:1.2px,color:#0F172A;
+
+  Start((Start)):::terminal
+  Draft["DRAFT<br/>create, edit metadata,<br/>upload version"]:::state
+  Pending["PENDING<br/>approval queue"]:::state
+  Published["PUBLISHED<br/>approved document"]:::state
+  Archived["ARCHIVED<br/>final retention state"]:::state
+  End((End)):::terminal
+  Deleted["DELETED<br/>soft-deleted draft"]:::deleted
+
+  RejectNote["Reject from PENDING<br/>returns document to DRAFT"]:::note
+  RestoreNote["Restore from trash<br/>returns DELETED to DRAFT<br/>within recovery window"]:::note
+  PendingNote["Approvals page shows PENDING queue,<br/>SLA, readiness, and review drawer"]:::note
+  ArchivedNote["Archived documents remain visible by policy.<br/>Download remains restricted."]:::note
+
+  Start -->|create| Draft
+  Draft -->|submit| Pending
+  Pending -->|approve| Published
+  Published -->|archive or retention auto-archive| Archived
+  Archived --> End
+
+  Draft -->|soft delete| Deleted
+
+  Pending -.-> RejectNote
+  Deleted -.-> RestoreNote
+  Pending -.-> PendingNote
+  Archived -.-> ArchivedNote

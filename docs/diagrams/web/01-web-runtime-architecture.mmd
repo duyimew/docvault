@@ -1,0 +1,56 @@
+%%{init: {"theme": "neutral", "flowchart": {"curve": "linear", "htmlLabels": true}}}%%
+flowchart LR
+  classDef actor fill:#FFFFFF,stroke:#1F2937,stroke-width:1.5px,color:#111827;
+  classDef web fill:#E0F2FE,stroke:#0284C7,stroke-width:1.5px,color:#0F172A;
+  classDef api fill:#EEF2FF,stroke:#4F46E5,stroke-width:1.5px,color:#111827;
+  classDef svc fill:#DCFCE7,stroke:#16A34A,stroke-width:1.5px,color:#052E16;
+  classDef data fill:#FEF3C7,stroke:#D97706,stroke-width:1.5px,color:#3B2400;
+  classDef sec fill:#FFE4E6,stroke:#E11D48,stroke-width:1.5px,color:#3B0710;
+
+  User(["Nguoi dung<br/>Browser"]):::actor
+
+  subgraph Web["Frontend Next.js - apps/web"]
+    direction TB
+    Pages["App Router pages<br/>dashboard / documents / approvals / audit / security / evidence"]:::web
+    Shell["AppShell<br/>sidebar / topbar / command palette"]:::web
+    Providers["AppProvider<br/>Theme + Query + Auth"]:::web
+    ApiClient["Axios apiClient<br/>Bearer token + error handling"]:::web
+    NextApi["Next API routes<br/>/api/auth/* + /api/[...path]"]:::api
+    Pages --> Shell --> Providers --> ApiClient --> NextApi
+  end
+
+  Keycloak["Keycloak<br/>SSO + JWT roles"]:::api
+  Gateway["API Gateway<br/>JWT + RBAC + proxy"]:::api
+
+  subgraph Services["Backend services"]
+    direction TB
+    Metadata["metadata-service<br/>metadata / ACL / policy / retention / evidence"]:::svc
+    Document["document-service<br/>upload / scan / preview / stream"]:::svc
+    Workflow["workflow-service<br/>submit / approve / reject / archive"]:::svc
+    Audit["audit-service<br/>audit query / verify-chain / security summary"]:::sec
+    Notify["notification-service<br/>runtime work queue"]:::svc
+  end
+
+  subgraph Data["Runtime data stores"]
+    direction TB
+    PostgreSQL[("PostgreSQL<br/>metadata DB")]:::data
+    MinIO[("MinIO/S3<br/>file objects")]:::data
+    MongoDB[("MongoDB<br/>audit DB")]:::data
+  end
+
+  User --> Pages
+  NextApi <-->|login / callback / logout| Keycloak
+  NextApi --> Gateway
+  Gateway --> Metadata
+  Gateway --> Document
+  Gateway --> Workflow
+  Gateway --> Audit
+  Gateway --> Notify
+  Metadata --> PostgreSQL
+  Document --> MinIO
+  Audit --> MongoDB
+  Workflow --> Metadata
+  Workflow --> Audit
+  Workflow --> Notify
+  Document --> Metadata
+  Document --> Audit

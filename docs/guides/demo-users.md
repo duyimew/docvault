@@ -31,7 +31,7 @@ curl -s -X POST \
 
 ### B. Demo Login (No Backend Required)
 
-1. Go to `http://localhost:3100/login`
+1. Go to `http://localhost:3006/login`
 2. Click "Demo Login" tab
 3. Enter any username (e.g. `demo_editor`)
 4. Select a role from the dropdown

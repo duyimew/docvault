@@ -1,0 +1,41 @@
+%%{init: {"theme": "neutral", "sequence": {"mirrorActors": false}}}%%
+sequenceDiagram
+  autonumber
+  actor User as User
+  participant Web as Next.js Web
+  participant Gateway as API Gateway
+  participant Metadata as metadata-service
+  participant Document as document-service
+  participant Audit as audit-service
+  participant Storage as MinIO/S3
+
+  User->>Web: Click Download on Document Detail
+  Web->>Gateway: POST /metadata/documents/:id/download-authorize
+  Gateway->>Metadata: Forward JWT + actor context
+  Metadata->>Metadata: Check status, role, owner, ACL, classification, version
+
+  alt Denied by policy
+    Metadata-->>Gateway: 403 + deny reason
+    Metadata-->>Audit: Record DENY event
+    Gateway-->>Web: Error response
+    Web-->>User: Show disabled/denied reason
+  else Allowed
+    Metadata-->>Gateway: grantToken + version + filename
+    Gateway-->>Web: Authorization result
+    Web->>Gateway: POST /documents/:id/presign-download with grantToken
+    Gateway->>Document: Forward grantToken
+    Document->>Metadata: Verify grant or re-authorize if needed
+    Metadata-->>Document: Grant valid
+    Document-->>Gateway: Version/download posture
+    Gateway-->>Web: Stream posture + filename
+    Web->>Gateway: GET /documents/:id/versions/:v/stream?token=grantToken
+    Gateway->>Document: Stream request
+    Document->>Storage: Read object by objectKey
+    Storage-->>Document: File bytes
+    Document-->>Gateway: Controlled stream
+    Gateway-->>Web: Blob response
+    Document-->>Audit: Record authorized content access
+    Web-->>User: Browser download starts
+  end
+
+  Note over Web,Storage: Browser never receives objectKey or MinIO URL. Compliance Officer is denied file content.

@@ -1,0 +1,106 @@
+%%{init: {"flowchart": {"defaultRenderer": "elk", "curve": "linear", "nodeSpacing": 45, "rankSpacing": 70}}}%%
+flowchart LR
+  GitOps["GitOps branch<br/>gitops-testing"]
+  Harbor["Harbor Registry"]
+  AWSSecrets["AWS Secrets Manager"]
+  User["User Browser"]
+  Cloudflare["Cloudflare DNS"]
+  AwsLb["AWS Load Balancer"]
+  Kms["AWS KMS"]
+  S3["AWS S3 buckets"]
+
+  subgraph EKS["AWS EKS Cluster"]
+    direction LR
+
+    subgraph Argo["Namespace: argocd"]
+      direction TB
+      RootApp["docvault-root"]
+      ChildApps["Argo child apps"]
+    end
+
+    subgraph Platform["Cluster platform controllers"]
+      direction TB
+      IngressNginx["ingress-nginx"]
+      CertManager["cert-manager"]
+      LetsEncryptIssuer["letsencrypt-cloudflare"]
+      ExternalSecretsOp["External Secrets Operator"]
+      CnpgOperator["CloudNativePG Operator"]
+      PerconaOperator["Percona PSMDB Operator"]
+    end
+
+    subgraph Docvault["Namespace: docvault"]
+      direction TB
+      PublicRoutes["Public Ingress + NetworkPolicy"]
+      Web["docvault-web"]
+      Gateway["docvault-gateway"]
+      Services["Backend services"]
+      Keycloak["Keycloak"]
+      SecretStore["SecretStore"]
+      RuntimeSecrets["Runtime secrets"]
+      DataStores["Data stores"]
+      KeycloakHook["Keycloak PostSync job"]
+    end
+
+    subgraph Monitoring["Namespace: monitoring"]
+      direction TB
+      Prometheus["Prometheus"]
+      Grafana["Grafana"]
+      Loki["Loki"]
+      KubeMetrics["Kubernetes metrics"]
+    end
+  end
+
+  GitOps --> RootApp
+  RootApp --> ChildApps
+  ChildApps --> PublicRoutes
+  ChildApps --> Web
+  ChildApps --> Gateway
+  ChildApps --> Services
+  ChildApps --> Keycloak
+  ChildApps --> SecretStore
+  ChildApps --> DataStores
+  ChildApps --> KeycloakHook
+  ChildApps --> Prometheus
+  ChildApps --> Grafana
+  ChildApps --> Loki
+
+  User --> Cloudflare
+  Cloudflare --> AwsLb
+  AwsLb --> IngressNginx
+  IngressNginx --> PublicRoutes
+  CertManager --> LetsEncryptIssuer
+  LetsEncryptIssuer --> Cloudflare
+  LetsEncryptIssuer --> PublicRoutes
+  PublicRoutes -->|app.docvault.id.vn| Web
+  PublicRoutes -->|auth.docvault.id.vn| Keycloak
+
+  Web -->|/api proxy| Gateway
+  Web -->|OIDC| Keycloak
+  Gateway -->|token check| Keycloak
+  Gateway --> Services
+
+  Services --> DataStores
+  Services --> S3
+  Keycloak --> DataStores
+  DataStores -->|backup| S3
+  Kms --> S3
+
+  Harbor -->|image pull| RuntimeSecrets
+
+  AWSSecrets --> SecretStore
+  ExternalSecretsOp --> SecretStore
+  SecretStore --> RuntimeSecrets
+  CnpgOperator --> DataStores
+  PerconaOperator --> DataStores
+
+  RuntimeSecrets --> Web
+  RuntimeSecrets --> Gateway
+  RuntimeSecrets --> Services
+  RuntimeSecrets --> Keycloak
+  RuntimeSecrets --> DataStores
+  KeycloakHook --> Keycloak
+
+  KubeMetrics --> Prometheus
+  Grafana --> Prometheus
+  Grafana --> Loki
+
