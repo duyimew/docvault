@@ -12,7 +12,7 @@ tiết hơn, đọc thêm:
 - `docs/sonarqube-docker-jenkins-setup.md`: chạy SonarQube và nối với Jenkins.
 - `docs/docvault_terraform_eks_argocd_plan.md`: tạo EKS và bootstrap Argo CD.
 - `docs/docvault_eks_pause_resume_runbook.md`: tắt/mở node EKS để tiết kiệm chi phí.
-- `docs/PORT_FORWARD_TESTING.md`: truy cập EKS bằng NodePort sau khi node IP thay đổi.
+- `docs/DEPLOYMENT_RUNBOOK.md`: cẩm nang triển khai và vận hành hệ thống DocVault.
 - `docs/demo-flow.md`: kịch bản demo EKS gồm app, Jenkins/ZAP, Grafana và Loki.
 - `docs/security-sca-triage.md`: bản ghi xử lý SCA, package đã fix và exception còn lại.
 
@@ -44,7 +44,7 @@ Máy dùng để thao tác triển khai cần có:
 - Terraform 1.6+
 - kubectl
 - Helm, Argo CD CLI và Checkov nếu cần thao tác/scan thủ công
-- Docker Hub account và GitHub token cho Jenkins credentials
+- Harbor robot account và GitHub token cho Jenkins credentials
 - AWS IAM permission đủ để tạo VPC, EKS, IAM role, Security Group và EBS add-on
 
 Khuyến nghị kích hoạt đúng pnpm version của repo:
@@ -148,7 +148,7 @@ Lần đầu đăng nhập `admin` / `admin`, đổi password, tạo token cho J
 
 Credentials:
 
-- `dockerhub-credentials`: Docker Hub username/password hoặc token.
+- `harbor-docvault-dev-robot-token`: Harbor robot token dùng để push image vào project `docvault-dev`.
 - `github-credentials`: GitHub PAT có quyền push branch GitOps.
 - `sonar-token`: token tạo trong SonarQube.
 
@@ -632,8 +632,7 @@ cho browser.
 
 ### Pod `ImagePullBackOff`
 
-Kiểm tra image tag/digest trên `infra/k8s/values/*.yaml`, Docker Hub image đã
-tồn tại, và Argo CD đã sync đúng branch `gitops-testing`.
+Kiểm tra image tag/digest trên `infra/k8s/values/*.yaml`, image đã tồn tại trong Harbor `harbor.docvault.id.vn/docvault-dev`, pull secret đã đúng, và Argo CD đã sync đúng branch `gitops-testing`.
 
 ### Terraform bị unauthorized
 
